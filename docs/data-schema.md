@@ -1,6 +1,10 @@
 # 데이터 형식 초안
 
-이 문서는 개발 시작을 위한 제안입니다. 데이터 수집과 탐지 기능은 아직 구현되지 않았습니다.
+이 문서는 샘플 집계의 현재 형식과 이후 전체 범위·탐지 개발을 위한 제안입니다. 샘플 수집은 `pipeline/collect.py`, 정제는 `pipeline/preprocess.py`, 집계는 `pipeline/aggregate.py`에 구현되어 있습니다. 전체 기간·전체 분야 수집과 탐지는 다음 단계입니다.
+
+샘플의 원본 응답·검증 결과·실행 기록 형식과 실행 명령은 [샘플 수집 안내](collection.md)를 참고하세요.
+
+정제 규칙·집계 표·논문별 근거·실제 샘플 결과·검증 방법은 [샘플 정제·집계 안내](processing.md)에 정리했습니다. 샘플 결과는 `data_scope: sample`로 구분합니다.
 
 ## 공통 규칙
 
@@ -20,6 +24,9 @@
 | `institutions_kr.csv` | domestic_id, name, type, ror |
 | `collab_counts.csv` | domestic_id, foreign_id, field, year, collab_count |
 | `kr_totals.csv` | domestic_id, field, year, international_total |
+| `collab_shares.csv` | domestic_id, foreign_id, field, year, collab_count, international_total, share |
+| `pair_contributions.csv` | work_id, domestic_id, foreign_id, field, year |
+| `total_contributions.csv` | work_id, domestic_id, field, year |
 | `collection_log.csv` | request_id, collected_at, query, response_count, status |
 | `injections.csv` | scenario_id, domestic_id, foreign_id, field, year |
 | `detections.csv` | run_id, scenario_id, domestic_id, foreign_id, field, year, detector, threshold, correction_id, score |

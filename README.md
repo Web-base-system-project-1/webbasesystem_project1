@@ -33,11 +33,16 @@ python -m flask --app web.app run --debug --port 5001
 - 메인 페이지, API 연결 상태 표시, `/api/health`.
 - Mac·Windows용 VS Code 설정과 개발 환경 확인 스크립트.
 - 수집·탐지·실험용 패키지와 폴더 구조.
+- OpenAlex 2025년 한국 기관 참여 논문 샘플 수집기, 오프라인 결과 검증과 자동 테스트.
+- 샘플 정제·기관 쌍 집계·협력 비중·논문별 근거와 원본 5편 대조 검증.
 
-데이터 수집, 탐지 알고리즘, 실제 분석 화면은 이후 각 담당자가 구현합니다.
+전체 기간·전체 분야 수집과 해당 범위의 정제·집계, 탐지 알고리즘, 실제 분석 화면은 이후 각 담당자가 구현합니다.
 
 ## 문서
 
+- [기간별 역할 일정과 AI 작업 방식](schedule.md)
+- [OpenAlex 샘플 수집·결과 확인](docs/collection.md)
+- [샘플 정제·기관 쌍 집계·검증 결과](docs/processing.md)
 - [전체 환경 설정](setting.md)
 - [API 명세](docs/api.md)
 - [데이터 형식 초안](docs/data-schema.md)

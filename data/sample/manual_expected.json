@@ -1,0 +1,63 @@
+{
+  "description": "실제 수집 원본의 기관 목록을 직접 대조해 작성한 5편 기준값. 집계 함수로 생성한 정답이 아님.",
+  "source_sample_sha256": "3381e0e966c7c66cd0b71f0ec7995b34595c4db7faa423729f6444b6d3d3507c",
+  "domestic_types": ["education", "facility", "government"],
+  "identity_policy": "exact_openalex_id_no_ror_or_lineage_merging",
+  "cases": [
+    {
+      "work_id": "https://openalex.org/W4411182927",
+      "label": "영남대 단독 소속: 해외 기관이 없어 제외",
+      "expected_status": "excluded",
+      "expected_reason": "no_identified_foreign_institution",
+      "all_institution_count": 1,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0
+    },
+    {
+      "work_id": "https://openalex.org/W4407584988",
+      "label": "중앙대 1곳 × 미국 기관 3곳: 기관 쌍 3건, 중앙대 논문 총수 1편",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 4,
+      "domestic_ids": ["https://openalex.org/I67900169"],
+      "foreign_ids": ["https://openalex.org/I10421873", "https://openalex.org/I174216632", "https://openalex.org/I2799503643"],
+      "pair_contributions": 3,
+      "total_contributions": 1
+    },
+    {
+      "work_id": "https://openalex.org/W4410028173",
+      "label": "고려대 × Yale·Imperial: 국내 서울대병원은 기본 유형에서 제외하며 상위 대학으로 자동 병합하지 않음",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 4,
+      "domestic_ids": ["https://openalex.org/I197347611"],
+      "foreign_ids": ["https://openalex.org/I32971472", "https://openalex.org/I47508984"],
+      "pair_contributions": 2,
+      "total_contributions": 1
+    },
+    {
+      "work_id": "https://openalex.org/W4408332484",
+      "label": "순천향대·경희대 × 미국 병원 2곳: 기관 쌍 4건, 국내 기관별 총수 각각 1편. 해외 기관 유형은 제한하지 않음",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 4,
+      "domestic_ids": ["https://openalex.org/I24541011", "https://openalex.org/I35928602"],
+      "foreign_ids": ["https://openalex.org/I1283280774", "https://openalex.org/I48633490"],
+      "pair_contributions": 4,
+      "total_contributions": 2
+    },
+    {
+      "work_id": "https://openalex.org/W4409371320",
+      "label": "호서대 × 중국 기관 3곳: 기관 쌍 3건, 호서대 논문 총수 1편",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 4,
+      "domestic_ids": ["https://openalex.org/I162706563"],
+      "foreign_ids": ["https://openalex.org/I20231570", "https://openalex.org/I3045169105", "https://openalex.org/I4210093964"],
+      "pair_contributions": 3,
+      "total_contributions": 1
+    }
+  ]
+}

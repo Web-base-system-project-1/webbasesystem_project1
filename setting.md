@@ -20,7 +20,7 @@
 
 Python 3.12가 없으면 먼저 설치합니다. Windows에서는 설치 시 Python Launcher도 설치하고, 터미널에서 Python을 사용할 수 있도록 설치 옵션을 확인합니다. 설치 후 VS Code 터미널을 새로 엽니다.
 
-홈페이지·API 상태 확인에는 OpenAlex 키가 필요 없습니다. 실제 논문 수집·탐지 알고리즘은 다음 개발 단계입니다.
+홈페이지·API 상태 확인에는 OpenAlex 키가 필요 없습니다. 샘플 논문 수집은 15번과 [샘플 수집 안내](docs/collection.md), 정제·집계는 16번과 [정제·집계 안내](docs/processing.md)를 참고하세요. 전체 범위 수집과 탐지는 다음 개발 단계입니다.
 
 ## 2. 공용 레포 열기
 
@@ -357,7 +357,7 @@ python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True)
 - 3번이 탐지 결과 표·What-if 패널 구현을 지원하고 4번이 전체 화면을 통합합니다.
 - 데이터 형식과 API 변경은 관련 담당자에게 알리고 `docs/`도 함께 수정합니다.
 
-현재 데이터 수집·탐지·실험 모듈은 빈 시작 파일입니다. 초기 화면과 환경 확인이 된 상태에서 각 기능을 개발합니다. `tests/`에는 계산을 검증하는 테스트를 추가할 예정이며, 현재 자동 환경 확인 명령은 `python scripts/check_setup.py`입니다.
+현재 `pipeline/collect.py`의 샘플 수집과 `pipeline/preprocess.py`·`pipeline/aggregate.py`의 샘플 정제·집계가 구현되어 있습니다. 전체 범위 수집·정제·집계와 탐지·실험은 다음 단계입니다. 환경 확인은 `python scripts/check_setup.py`, 전체 자동 테스트는 `python -m pytest -q`로 실행합니다.
 
 ## 10. 패키지를 추가하거나 버전을 바꿀 때
 
@@ -483,3 +483,40 @@ python -m flask --app web.app run --debug --port 5002
 - VS Code Python 설정: <https://code.visualstudio.com/docs/python/settings-reference>
 - VS Code Python 디버깅: <https://code.visualstudio.com/docs/python/debugging>
 - GitHub 협업 흐름: <https://docs.github.com/en/get-started/using-github/github-flow>
+
+## 15. 1번 담당자: OpenAlex 샘플 수집
+
+1. 가상환경을 활성화합니다.
+2. 프로젝트 `.env`에 본인의 실제 `OPENALEX_API_KEY`를 입력합니다.
+3. 실제 토픽 ID를 확인하고 수집합니다. 아래 `T11636`은 실행 확인용 AI 하위 토픽 예시입니다.
+
+```bash
+python -m pipeline.collect --topic-id T11636 --limit 100 --output-dir data/raw/ai_2025_sample
+python scripts/check_sample.py data/raw/ai_2025_sample
+```
+
+같은 출력 폴더가 이미 있으면 덮어쓰지 않습니다. 다시 수집하려면 `--output-dir`을 생략해 실행별 폴더를 자동 생성하거나 새 폴더 이름을 지정합니다.
+
+Windows에서 가상환경을 활성화하지 않았다면:
+
+```powershell
+.\.venv\Scripts\python.exe -m pipeline.collect --topic-id T11636 --limit 100 --output-dir data/raw/ai_2025_sample
+.\.venv\Scripts\python.exe scripts/check_sample.py data/raw/ai_2025_sample
+```
+
+실행 옵션·저장 파일·오류 처리와 실제 결과 확인 방법은 [docs/collection.md](docs/collection.md)에 설명했습니다. 100편 샘플은 파이프라인 검증용이며, 전체 수집과 집계는 다음 단계에서 진행합니다.
+
+## 16. 1번 담당자: 샘플 정제·집계
+
+수집한 100편으로 기본 국내 기관 유형을 적용한 국제 공동연구 샘플을 만들고 집계합니다. 오프라인 처리이므로 이 단계에서는 API 키를 사용하지 않습니다.
+
+```bash
+python -m pipeline.preprocess --input data/raw/ai_2025_sample/sample.json --output-dir data/processed/ai_2025_sample
+python -m pipeline.aggregate --input data/processed/ai_2025_sample/clean_works.json
+python scripts/check_aggregation.py data/processed/ai_2025_sample --manual-reference data/sample/manual_expected.json
+python -m pytest -q
+```
+
+위 기본 경로는 이미 실행해 결과가 만들어진 상태입니다. 재실행할 때는 정제 출력 폴더 이름을 새로 지정하고, 이후 집계·검증 경로도 같은 폴더로 바꿉니다. Windows에서 가상환경을 활성화하지 않았다면 `python`을 `.\.venv\Scripts\python.exe`로 바꿉니다.
+
+실제 샘플은 100편에서 33편을 유지했고, 국내 기관 31곳·기관 쌍 158개로 집계됐습니다. 제외 사유, 국내 병원 포함 옵션, 집계 근거, CSV 형식과 원본 5편 대조 결과는 [docs/processing.md](docs/processing.md)를 참고하세요. 전체 기간 5편 이상 조건은 최종 기간 수집 후 적용합니다.
