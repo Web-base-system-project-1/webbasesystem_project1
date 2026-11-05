@@ -1,0 +1,25 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# 개인 환경 변수
+.env
+.env.*
+!.env.example
+
+# 대용량 데이터·실험 결과
+data/raw/
+data/processed/
+results/
+
+# 로컬 도구·검증 임시 파일
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db

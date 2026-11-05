@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Project 7 | 국제 공동연구 변화 분석</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </head>
+  <body>
+    <main class="container">
+      <p class="eyebrow">웹기반시스템 · Project 7</p>
+      <h1>국제 공동연구 변화 분석</h1>
+      <p class="description">
+        OpenAlex의 공동연구 데이터를 수집하고, 협력 비중의 변화를 탐지하는 팀 프로젝트입니다.
+      </p>
+
+      <section class="status-card" aria-labelledby="status-title">
+        <h2 id="status-title">개발 환경 확인</h2>
+        <p id="api-status" class="status" role="status" aria-live="polite" data-state="loading">
+          API 연결 확인 중...
+        </p>
+        <p>API 연결이 확인되면 Flask 서버, HTML, JavaScript가 함께 동작하는 상태입니다.</p>
+        <a href="{{ url_for('health') }}">API 응답 직접 확인하기 →</a>
+      </section>
+
+      <section class="next-steps" aria-labelledby="next-title">
+        <h2 id="next-title">다음 개발 단계</h2>
+        <ol>
+          <li>분야 정의와 논문 수집·집계</li>
+          <li>변화 탐지와 이상 주입·평가</li>
+          <li>분석 API와 시각화 화면 연결</li>
+        </ol>
+        <p>팀원별 환경 설정과 실행·확인 방법은 레포의 <code>setting.md</code>를 참고하세요.</p>
+      </section>
+    </main>
+  </body>
+</html>
