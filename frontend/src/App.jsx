@@ -8,24 +8,31 @@ import DetectionList from './components/DetectionList'
 import './App.css'
 
 function App() {
-  const [catalog, setCatalog] = useState(null)
+  const [catalogResult, setCatalogResult] = useState(null)
   const [selection, setSelection] = useState({
     domestic_id: '',
     foreign_id: '',
     field: '',
   })
-  const [timeline, setTimeline] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [empty, setEmpty] = useState(false)
+  const [timelineResult, setTimelineResult] = useState(null)
   const [retry, setRetry] = useState(0)
+  const catalog = catalogResult?.retry === retry ? catalogResult.catalog : null
+  const catalogError =
+    catalogResult?.retry === retry ? catalogResult.error || '' : ''
+  const noSelection =
+    catalog && Object.values(selection).some((value) => !value)
+  // 선택·데이터 버전이 바뀐 렌더부터 이전 결과를 숨깁니다.
+  const result =
+    timelineResult?.catalog === catalog && timelineResult?.selection === selection
+      ? timelineResult
+      : null
+  const timeline = result?.data
+  const loading = !catalogError && (!catalog || (!noSelection && !result))
+  const error = catalogError || result?.error || ''
+  const empty = result?.empty || false
 
   useEffect(() => {
     const controller = new AbortController()
-    setLoading(true)
-    setError('')
-    setCatalog(null)
-    setTimeline(null)
     Promise.all(
       [
         '/api/meta',
@@ -35,6 +42,7 @@ function App() {
       ].map((path) => getData(path, controller.signal)),
     )
       .then(([meta, domestic, foreign, pairs]) => {
+        if (controller.signal.aborted) return
         if (
           [domestic, foreign, pairs].some(
             (data) => data.data_version !== meta.data_version,
@@ -46,19 +54,19 @@ function App() {
             '기관 목록을 모두 불러올 수 없습니다. 검색 API 연결이 필요합니다.',
           )
         const first = pairs.items[0]
-        setCatalog({ meta, domestic: domestic.items, foreign: foreign.items })
+        setCatalogResult({
+          retry,
+          catalog: { meta, domestic: domestic.items, foreign: foreign.items },
+        })
         setSelection({
           domestic_id: first?.domestic_id || domestic.items[0]?.id || '',
           foreign_id: first?.foreign_id || foreign.items[0]?.id || '',
           field: first?.field || meta.fields[0] || '',
         })
-        setLoading(false)
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
-          setError(err.message)
-          setLoading(false)
-        }
+        if (err.name !== 'AbortError' && !controller.signal.aborted)
+          setCatalogResult({ retry, error: err.message })
       })
     return () => controller.abort()
   }, [retry])
@@ -66,31 +74,32 @@ function App() {
   useEffect(() => {
     if (!catalog || Object.values(selection).some((value) => !value)) return
     const controller = new AbortController()
-    setLoading(true)
-    setError('')
-    setEmpty(false)
-    setTimeline(null)
     getData(
       `/api/timeline?${new URLSearchParams(selection)}`,
       controller.signal,
     )
       .then((data) => {
+        if (controller.signal.aborted) return
         if (data.data_version !== catalog.meta.data_version)
           throw new Error('데이터가 갱신되었습니다. 다시 불러와 주세요.')
-        setTimeline({
-          ...data,
-          points: [...data.points].sort((a, b) => a.year - b.year),
+        setTimelineResult({
+          catalog,
+          selection,
+          data: {
+            ...data,
+            points: [...data.points].sort((a, b) => a.year - b.year),
+          },
+          empty: !data.points.length,
         })
-        setEmpty(!data.points.length)
       })
       .catch((err) => {
-        if (err.name !== 'AbortError') {
-          if (err.status === 404) setEmpty(true)
-          else setError(err.message)
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false)
+        if (err.name !== 'AbortError' && !controller.signal.aborted)
+          setTimelineResult({
+            catalog,
+            selection,
+            empty: err.status === 404,
+            error: err.status === 404 ? '' : err.message,
+          })
       })
     return () => controller.abort()
   }, [catalog, selection])
@@ -101,8 +110,6 @@ function App() {
       ...previous,
       [event.target.name]: event.target.value,
     }))
-  const noSelection =
-    catalog && Object.values(selection).some((value) => !value)
 
   return (
     <main>
@@ -115,7 +122,9 @@ function App() {
           <span className="data-note">
             {catalog.meta.is_real_data ? '수집 데이터' : '예시 데이터'}
             <span className="note-dot">·</span>
-            {catalog.meta.years.min}–{catalog.meta.years.max}
+            {catalog.meta.years.min == null
+              ? '기간 정보 없음'
+              : `${catalog.meta.years.min}–${catalog.meta.years.max}`}
           </span>
         )}
       </header>

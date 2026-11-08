@@ -24,8 +24,8 @@ npm ci
 npm run dev
 ```
 
-최초 설치는 완료되어 있습니다. 이후 package-lock.json의 의존성이
-변경됐거나 다른 컴퓨터에서 내려받았을 때 npm ci를 실행합니다.
+각 팀원은 최초 실행 전에 npm ci를 실행합니다. 이후 package-lock.json의
+의존성이 변경됐을 때도 npm ci로 다시 설치합니다.
 
 React 화면: http://127.0.0.1:5173/
 기존 Flask 화면: http://127.0.0.1:5001/
@@ -74,11 +74,12 @@ API 원본 명세: ../docs/api.md
 ## 확인 명령
 
 ```bash
+npm test
 npm run lint
 npm run build
 ```
 
-build 결과는 dist/에 생성됩니다.
+API 요청·오류·취소 처리 회귀 테스트 8개를 실행합니다. build 결과는 dist/에 생성됩니다.
 
 ## 탐지 목록
 
