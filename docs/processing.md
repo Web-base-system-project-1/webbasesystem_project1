@@ -167,3 +167,13 @@ python -m pytest -q
 4. 해당 버전의 집계·시계열을 2번 탐지 담당자에게 전달합니다.
 
 현재 2025년 샘플은 집계 로직 검증용입니다. 실제 과거 k년 기준선과 탐지 성능 실험에는 전체 기간 데이터가 필요합니다.
+
+## 9. 팀 공유용 실제 집계 받기
+
+검증한 집계 CSV 6개를 [공유용 실제 샘플 폴더](../data/sample/actual/ai_2025_sample/README.md)에 게시했습니다.
+원본을 수집하지 않은 팀원도 최신 main에서 받거나 [집계 ZIP](https://raw.githubusercontent.com/Web-base-system-project-1/webbasesystem_project1/main/data/sample/actual/ai_2025_sample.zip)만 내려받을 수 있습니다.
+파일별 열·행 수·해시·조회 API 연결 방법은 공유 폴더의 README.md와 MANIFEST.json에 있습니다.
+
+실제 데이터의 범위는 **2025년 AI 하위 토픽 T11636의 첫 100편 중 유지한 33편**입니다.
+기존 `data/sample/example`은 화면 개발용 가상 데이터이며, 이번 공유본은 `data/sample/actual/ai_2025_sample`로 구분합니다.
+수집 원본과 자동 생성 산출물은 계속 Git에서 제외하고, 공유본은 검증된 시점의 스냅샷으로 관리합니다.

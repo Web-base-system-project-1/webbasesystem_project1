@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "data_scope": "sample",
+  "is_real_data": true,
+  "data_version": "openalex-ai-2025-t11636-sample-3381e0e966c7-v1",
+  "published_at": "2026-11-08T13:24:45.892050+00:00",
+  "field": "ai",
+  "years": {
+    "min": 2025,
+    "max": 2025
+  },
+  "primary_topic_id": "T11636",
+  "sampling": "first page capped at 100 works; not random or exhaustive",
+  "source_sample": {
+    "path": "data/raw/ai_2025_sample/sample.json",
+    "sha256": "3381e0e966c7c66cd0b71f0ec7995b34595c4db7faa423729f6444b6d3d3507c"
+  },
+  "source_clean": {
+    "path": "data/processed/ai_2025_sample/clean_works.json",
+    "sha256": "84bf929ae2c5816bc6031a2a8f185cd81d9a3772bdcb0969c2db48697cc3b7d3"
+  },
+  "source_aggregation_created_at": "2026-11-05T04:56:27.544703+00:00",
+  "source_code_commit": "5515ae26f2bc06037941bb62024b7ba8799fc970",
+  "preprocess_summary": {
+    "input_records": 100,
+    "retained_works": 33,
+    "excluded_records": 67,
+    "reasons": {
+      "included": 33,
+      "no_identified_foreign_institution": 55,
+      "no_target_domestic_institution": 11,
+      "too_many_institutions": 1
+    },
+    "repeated_institution_occurrences": 566,
+    "works_with_unknown_country": 0
+  },
+  "summary": {
+    "retained_works": 33,
+    "domestic_institutions": 31,
+    "foreign_institutions": 123,
+    "institution_pair_rows": 158,
+    "pair_contributions": 165,
+    "total_contributions": 52,
+    "same_ror_review_groups": 0
+  },
+  "rules": {
+    "domestic_types": [
+      "education",
+      "facility",
+      "government"
+    ],
+    "max_unique_institutions_per_work": 50,
+    "foreign": "known_country_other_than_KR_any_institution_type",
+    "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+    "min_five_papers_period_filter_applied": false
+  },
+  "verification": {
+    "source_aggregation_check": "passed",
+    "manual_reference_cases_passed": 5,
+    "manual_reference_path": "data/sample/manual_expected.json"
+  },
+  "encoding": "UTF-8",
+  "line_endings": "LF",
+  "files": {
+    "collab_counts.csv": {
+      "rows": 158,
+      "columns": [
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year",
+        "collab_count"
+      ],
+      "sha256": "76c6870d9dc0f10b60c3cc5c08f98196b8a9125a392de7642d4caf46e66663c2",
+      "source_sha256": "ce45938d0f52f840150c6a8e2e3957e5f2ad35c88c7fab3b50606838582eb7af"
+    },
+    "kr_totals.csv": {
+      "rows": 31,
+      "columns": [
+        "domestic_id",
+        "field",
+        "year",
+        "international_total"
+      ],
+      "sha256": "965ec0b8c418f0f1eda7ac492f47a73468bfa99cf6b292ba290846784e9c6228",
+      "source_sha256": "79af42cc5ea31a1063820b205145d867eddb6f5b68b32b5794c36b2db6e88fa6"
+    },
+    "collab_shares.csv": {
+      "rows": 158,
+      "columns": [
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year",
+        "collab_count",
+        "international_total",
+        "share"
+      ],
+      "sha256": "44bc562736a5281f2c048a750677ea351e7510d148ebf30e8a6c8ab94296ed32",
+      "source_sha256": "9dabdfa5a93265e5ecb0a63763ff26c08569b046167768b66d61d73b7896311d"
+    },
+    "institutions_kr.csv": {
+      "rows": 31,
+      "columns": [
+        "domestic_id",
+        "name",
+        "type",
+        "ror"
+      ],
+      "sha256": "4f2a92df54578998af3b0920e9b29db18104fde3a6ae59b7c65d4040be8f5e3b",
+      "source_sha256": "f1839cc34df8bd63e257eb8ce619cd15e8d76073c1e8f456729638f375ebdbd3"
+    },
+    "pair_contributions.csv": {
+      "rows": 165,
+      "columns": [
+        "work_id",
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year"
+      ],
+      "sha256": "4ac64b6dfbd753b838230e3d23a61d52b991628550b9c0bfaa8ed747c81b8ce1",
+      "source_sha256": "e970ec24a96965f913fdd2de505456f13885d8b548a29f3e76c2ea818eeb28dd"
+    },
+    "total_contributions.csv": {
+      "rows": 52,
+      "columns": [
+        "work_id",
+        "domestic_id",
+        "field",
+        "year"
+      ],
+      "sha256": "75fa3e5c1f3f9557a68938315bbdc06c39b2ede7baab260a5a1792b25c784c64",
+      "source_sha256": "716a8d4359b5c8d5091b5e8bec49dd849851c98b171fbbeaa891e2b8bd5c76a2"
+    }
+  },
+  "not_included": [
+    "raw API responses",
+    "cleaned work JSON",
+    "personal environment settings",
+    "foreign institution names and countries CSV",
+    "detections and injections"
+  ]
+}

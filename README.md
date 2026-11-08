@@ -62,6 +62,8 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 
 ## 문서
 
+- [공유용 실제 집계 샘플: AI·2025년](data/sample/actual/ai_2025_sample/README.md) · [집계만 ZIP 다운로드](https://raw.githubusercontent.com/Web-base-system-project-1/webbasesystem_project1/main/data/sample/actual/ai_2025_sample.zip)
+
 - [11/8 프론트 진행 기록](docs/frontend-progress-2026-11-08.md)
 
 - [기간별 역할 일정과 AI 작업 방식](schedule.md)
