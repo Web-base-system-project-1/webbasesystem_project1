@@ -41,11 +41,11 @@ def clean(value):
     """NaN 과 numpy 숫자를 JSON 이 받을 수 있는 값으로 바꾼다."""
     if value is None:
         return None
-    if isinstance(value, float) and math.isnan(value):
+    if isinstance(value, float) and not math.isfinite(value):
         return None
     if hasattr(value, "item"):
         value = value.item()
-    if isinstance(value, float) and math.isnan(value):
+    if isinstance(value, float) and not math.isfinite(value):
         return None
     return value
 
@@ -74,9 +74,12 @@ def arg_float(name, default=None):
     if raw is None or raw == "":
         return default
     try:
-        return float(raw)
+        value = float(raw)
     except ValueError:
         raise ApiError("invalid_parameter", f"{name} 은 숫자여야 합니다. 받은 값: {raw}")
+    if not math.isfinite(value):
+        raise ApiError("invalid_parameter", f"{name} 은 유한한 숫자여야 합니다.")
+    return value
 
 
 def arg_required(name):
@@ -125,7 +128,7 @@ def pairs():
     frame = store.pairs(
         field=request.args.get("field"),
         domestic_id=request.args.get("domestic_id"),
-        min_count=arg_int("min_count"),
+        min_count=arg_int("min_count", minimum=0),
     )
     total = len(frame)
     items = []
