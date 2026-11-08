@@ -5,6 +5,7 @@
 """
 
 import json
+import math
 import os
 from pathlib import Path
 
@@ -28,12 +29,37 @@ def _resolve(value):
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
-def _read_csv(path, required=True):
+def _read_csv(path, required=True, columns=()):
     if not path.exists():
         if required:
             raise DataError(f"필수 파일이 없습니다: {path.name}")
-        return pd.DataFrame()
-    return pd.read_csv(path, encoding="utf-8")
+        return pd.DataFrame(columns=columns)
+    try:
+        frame = pd.read_csv(path, encoding="utf-8")
+    except (OSError, UnicodeError, pd.errors.ParserError, pd.errors.EmptyDataError) as error:
+        raise DataError(f"CSV 파일을 읽을 수 없습니다: {path.name}") from error
+    missing = [column for column in columns if column not in frame.columns]
+    if missing:
+        raise DataError(f"{path.name} 에 없는 열: {', '.join(missing)}")
+    return frame
+
+
+def _numeric_columns(frame, filename, columns):
+    for column in columns:
+        if column not in frame.columns:
+            continue
+        try:
+            values = pd.to_numeric(frame[column], errors="raise")
+            if not values.dropna().map(math.isfinite).all():
+                raise ValueError("non-finite number")
+            if column == "year":
+                if values.isna().any() or (values % 1 != 0).any():
+                    raise ValueError("invalid year")
+                values = values.astype(int)
+        except (ValueError, TypeError, OverflowError) as error:
+            raise DataError(f"{filename} 의 {column} 숫자 형식을 확인하세요.") from error
+        frame[column] = values
+    return frame
 
 
 class DataStore:
@@ -46,10 +72,26 @@ class DataStore:
 
         self.manifest = self._read_manifest()
         self.shares = self._read_shares()
-        self.domestic = _read_csv(self.data_dir / "institutions_kr.csv")
-        self.foreign = _read_csv(self.data_dir / "institutions_foreign.csv", required=False)
-        self.detections = _read_csv(self.data_dir / "detections.csv", required=False)
-        self.injections = _read_csv(self.data_dir / "injections.csv", required=False)
+        self.domestic = _read_csv(
+            self.data_dir / "institutions_kr.csv", columns=("domestic_id", "name", "type", "ror"),
+        )
+        self.foreign = _read_csv(
+            self.data_dir / "institutions_foreign.csv", required=False,
+            columns=("foreign_id", "name", "country_code"),
+        )
+        self.detections = _read_csv(
+            self.data_dir / "detections.csv", required=False,
+            columns=("domestic_id", "foreign_id", "field", "year", "detector", "threshold", "score"),
+        )
+        _numeric_columns(self.detections, "detections.csv", (
+            "year", "threshold", "score", "baseline_mean", "baseline_std",
+            "current_value", "previous_value", "collab_count", "min_count",
+        ))
+        self.injections = _read_csv(
+            self.data_dir / "injections.csv", required=False,
+            columns=("scenario_id", "domestic_id", "foreign_id", "field", "year"),
+        )
+        _numeric_columns(self.injections, "injections.csv", ("year",))
 
         self._domestic_name = dict(zip(self.domestic["domestic_id"], self.domestic["name"]))
         if self.foreign.empty:
@@ -64,7 +106,13 @@ class DataStore:
         for name in ("MANIFEST.json", "aggregation_manifest.json"):
             path = self.data_dir / name
             if path.exists():
-                return json.loads(path.read_text(encoding="utf-8"))
+                try:
+                    manifest = json.loads(path.read_text(encoding="utf-8"))
+                except (OSError, UnicodeError, ValueError) as error:
+                    raise DataError(f"메타데이터 파일을 읽을 수 없습니다: {name}") from error
+                if not isinstance(manifest, dict):
+                    raise DataError(f"메타데이터는 JSON 객체여야 합니다: {name}")
+                return manifest
         return {}
 
     @property
@@ -91,7 +139,10 @@ class DataStore:
             "is_real_data": self.is_real_data,
             "data_dir": self.data_dir.name,
             "fields": sorted(self.shares["field"].unique().tolist()),
-            "years": {"min": int(years.min()), "max": int(years.max())},
+            "years": {
+                "min": int(years.min()) if len(years) else None,
+                "max": int(years.max()) if len(years) else None,
+            },
             "detectors": self._detector_list(),
             "counts": {
                 "rows": int(len(self.shares)),
@@ -111,21 +162,22 @@ class DataStore:
     # -------------------------------------------------------------- 읽기 보조
 
     def _read_shares(self):
-        frame = _read_csv(self.data_dir / "collab_shares.csv")
-        missing = [c for c in SHARE_COLUMNS if c not in frame.columns]
-        if missing:
-            raise DataError(f"collab_shares.csv 에 없는 열: {', '.join(missing)}")
-        frame["year"] = frame["year"].astype(int)
-        return frame
+        frame = _read_csv(self.data_dir / "collab_shares.csv", columns=SHARE_COLUMNS)
+        return _numeric_columns(frame, "collab_shares.csv", (
+            "year", "collab_count", "international_total", "share",
+        ))
 
     def domestic_name(self, value):
-        return self._domestic_name.get(value, value)
+        name = self._domestic_name.get(value, value)
+        return value if pd.isna(name) else name
 
     def foreign_name(self, value):
-        return self._foreign_name.get(value, value)
+        name = self._foreign_name.get(value, value)
+        return value if pd.isna(name) else name
 
     def foreign_country(self, value):
-        return self._foreign_country.get(value)
+        country = self._foreign_country.get(value)
+        return None if pd.isna(country) else country
 
     # ------------------------------------------------------------------ 조회
 
@@ -142,8 +194,8 @@ class DataStore:
             frame["type"] = None
         if query:
             lowered = query.lower()
-            mask = frame["name"].astype(str).str.lower().str.contains(lowered, na=False)
-            mask |= frame["id"].astype(str).str.lower().str.contains(lowered, na=False)
+            mask = frame["name"].astype(str).str.lower().str.contains(lowered, na=False, regex=False)
+            mask |= frame["id"].astype(str).str.lower().str.contains(lowered, na=False, regex=False)
             frame = frame[mask]
         if type_:
             frame = frame[frame["type"] == type_]
