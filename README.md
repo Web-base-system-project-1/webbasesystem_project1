@@ -4,33 +4,30 @@ OpenAlex의 국내–해외 기관 공동연구 데이터를 수집하고, 협�
 
 저장 폴더 이름은 `webbasesystem_project1`이며, 과제 주제는 Project 7입니다.
 
-## 처음 시작하기
+## 설치 및 실행
 
-**Mac·Windows 설치, 가상환경 생성, VS Code 설정, 실행·확인은 [setting.md](setting.md)를 순서대로 따라 하세요.**
+처음 실행하는 팀원은 [Mac·Windows 실행 안내](docs/running.md)를 따라 하세요.
+Python 3.12와 Node.js·npm이 필요하며, Flask와 React를 **터미널 두 개**에서 실행합니다.
 
-Python 3.12를 사용합니다. 가상환경을 만든 다음:
+설치가 끝난 Mac 기준, 두 터미널 모두 프로젝트 최상위 폴더에서 시작합니다.
+
+터미널 1 — Flask:
 
 ```bash
-python -m pip install -r requirements-lock.txt
-python scripts/check_setup.py
+source .venv/bin/activate
 python -m flask --app web.app run --debug --port 5001
 ```
 
-Flask 서버와 기존 실행 확인 화면: <http://127.0.0.1:5001/>.
-서버가 이미 실행 중이면 중복 실행하지 않습니다.
-
-React 화면은 Node.js와 npm이 설치된 환경에서 별도 터미널로 실행합니다.
-프로젝트 최상위 폴더에서:
+터미널 2 — React:
 
 ```bash
 cd frontend
-npm ci
 npm run dev
 ```
 
-브라우저에서 사용하는 React 화면: <http://127.0.0.1:5173/>.
-`npm ci`는 최초 설치 또는 의존성 변경 시 실행합니다.
-자세한 프론트 실행·검증 방법은 [frontend/README.md](frontend/README.md)를 참고하세요.
+화면: <http://127.0.0.1:5173/> · API 상태: <http://127.0.0.1:5001/api/health>
+두 터미널을 켜두고 사용하며, 종료는 각 터미널에서 `Ctrl+C`입니다.
+React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 
 ## 화면과 API 구조
 

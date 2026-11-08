@@ -6,6 +6,8 @@ React + JavaScript + Vite로 구성했습니다. 기관·분야 선택 시 실�
 
 ## 실행
 
+처음 설치하는 팀원과 Windows 사용자는 [팀원용 설치·실행 안내](../docs/running.md)를 참고하세요.
+
 프로젝트 루트의 첫 번째 터미널에서 Flask 실행:
 
 ```bash
