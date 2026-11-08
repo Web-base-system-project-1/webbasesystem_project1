@@ -1,4 +1,4 @@
-"""z-score detector: this year's share vs. the mean/std of the previous k years."""
+"""z-score 탐지기: 올해 협력 비중을 직전 k년 비중의 평균·표준편차와 비교한다."""
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ def detect_zscore(panel, params):
         raise ValueError("k must be >= 2 (sample std needs two points)")
 
     df = panel.sort_values(PAIR_KEYS + ["year"]).reset_index(drop=True)
-    # shift(1): the current year is never part of its own baseline.
+    # shift(1): 올해 값은 자기 기준선에 포함되지 않는다 (기준선 누출 방지).
     prev = df.groupby(PAIR_KEYS, sort=False)["share"].shift(1)
     roll = prev.groupby([df[c] for c in PAIR_KEYS], sort=False).rolling(k, min_periods=1)
     n = roll.count().reset_index(level=list(range(len(PAIR_KEYS))), drop=True).sort_index()

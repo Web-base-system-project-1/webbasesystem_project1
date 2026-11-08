@@ -1,4 +1,4 @@
-"""Hand-calculated examples (see docs/detector-interface.md section 5)."""
+"""손으로 계산한 예시 검증 (docs/detector-interface.md 5번 참고)."""
 
 import math
 
@@ -36,7 +36,7 @@ def test_panel_fills_zero_years_and_missing_denominator():
 
 
 def test_zscore_hand_example():
-    panel = make_panel([10, 11, 9, 30])  # shares .10 .11 .09 .30
+    panel = make_panel([10, 11, 9, 30])  # 비중 .10 .11 .09 .30
     r = row(detect_zscore(panel, dict(k=3, threshold=3.0)), 2018)
     assert r["baseline_value"] == pytest.approx(0.10)
     assert r["baseline_std"] == pytest.approx(0.01)

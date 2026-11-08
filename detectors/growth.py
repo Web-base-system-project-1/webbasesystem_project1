@@ -1,4 +1,4 @@
-"""Growth detector: year-over-year increase in pair count (needs min_count)."""
+"""증가율 탐지기: 기관 쌍 공동논문 수의 전년 대비 증가율 (최소 건수 조건 포함)."""
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ from detectors.zscore import OUTPUT_COLUMNS
 
 
 def detect_growth(panel, params):
-    threshold = float(params["threshold"])  # 1.0 == +100%
+    threshold = float(params["threshold"])  # 1.0 = +100%
     min_count = int(params.get("min_count", 0))
 
     df = panel.sort_values(PAIR_KEYS + ["year"]).reset_index(drop=True)
