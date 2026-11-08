@@ -1,0 +1,175 @@
+"""Offline API contract checks against the committed example and invalid inputs."""
+
+import csv
+import json
+from pathlib import Path
+import shutil
+
+import pytest
+
+from web import data_store
+from web.app import app
+
+EXAMPLE = Path(__file__).resolve().parents[1] / "data/sample/example"
+
+
+@pytest.fixture
+def client(monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(EXAMPLE))
+    monkeypatch.setattr(data_store, "_store", None)
+    app.config["TESTING"] = True
+    with app.test_client() as client:
+        yield client
+
+
+@pytest.fixture
+def dataset(tmp_path, monkeypatch):
+    folder = tmp_path / "dataset"
+    shutil.copytree(EXAMPLE, folder)
+    monkeypatch.setenv("DATA_DIR", str(folder))
+    return folder
+
+
+def strict_json(response):
+    def reject(value):
+        raise AssertionError(f"Non-standard JSON value: {value}")
+    return json.loads(response.get_data(as_text=True), parse_constant=reject)
+
+
+def test_example_meta_and_all_timelines_match_csv(client):
+    meta = client.get("/api/meta").get_json()
+    assert meta["is_real_data"] is False
+    assert meta["counts"] == {
+        "rows": 198, "domestic_institutions": 3, "foreign_institutions": 3,
+        "pairs": 18, "detections": 75, "injections": 5,
+    }
+    with (EXAMPLE / "collab_shares.csv").open(encoding="utf-8") as handle:
+        shares = list(csv.DictReader(handle))
+    with (EXAMPLE / "detections.csv").open(encoding="utf-8") as handle:
+        detections = list(csv.DictReader(handle))
+    pairs = client.get("/api/pairs").get_json()
+    assert pairs["total"] == 18
+    observed = 0
+    for pair in pairs["items"]:
+        keys = {key: pair[key] for key in ("domestic_id", "foreign_id", "field")}
+        response = client.get("/api/timeline", query_string=keys)
+        assert response.status_code == 200
+        result = strict_json(response)
+        assert result["data_version"] == meta["data_version"]
+        expected = [row for row in shares if all(row[k] == v for k, v in keys.items())]
+        assert result["points"] == [{
+            "year": int(row["year"]), "collab_count": int(row["collab_count"]),
+            "international_total": int(row["international_total"]), "share": float(row["share"]),
+        } for row in expected]
+        expected_detections = [row for row in detections if all(row[k] == v for k, v in keys.items())]
+        assert len(result["detections"]) == len(expected_detections)
+        for actual, expected in zip(result["detections"], expected_detections):
+            for key in ("detector", "run_id", "scenario_id"):
+                assert actual[key] == expected[key]
+            for key in ("year", "threshold", "score", "collab_count"):
+                assert actual[key] == float(expected[key])
+        observed += len(result["detections"])
+    assert observed == 75
+
+
+@pytest.mark.parametrize("query", ["[", "(", ".", ".*"])
+def test_search_is_literal(client, query):
+    response = client.get("/api/institutions", query_string={"q": query})
+    assert response.status_code == 200
+    assert response.get_json()["total"] == 0
+    assert client.get("/api/institutions?q=example_kr").get_json()["total"] == 3
+
+
+@pytest.mark.parametrize("path", [
+    "/api/pairs?min_count=abc", "/api/pairs?min_count=-1",
+    "/api/pairs?limit=0", "/api/pairs?limit=1001",
+    "/api/institutions?role=other", "/api/detections?year=abc",
+    "/api/detections?threshold=nan", "/api/detections?threshold=inf",
+    "/api/detections?threshold=-inf",
+    "/api/timeline?domestic_id=EXAMPLE_KR_1&foreign_id=EXAMPLE_FR_1&field=ai&threshold=nan",
+])
+def test_invalid_parameters_return_json_400(client, path):
+    response = client.get(path)
+    assert response.status_code == 400
+    assert response.get_json()["error"]["code"] == "invalid_parameter"
+
+
+def test_missing_and_unknown_pairs(client):
+    assert client.get("/api/timeline").get_json()["error"]["code"] == "missing_parameter"
+    response = client.get("/api/timeline?domestic_id=NOPE&foreign_id=NOPE&field=ai")
+    assert response.status_code == 404
+    assert response.get_json()["error"]["code"] == "pair_not_found"
+
+
+@pytest.mark.parametrize(("filename", "contents"), [
+    ("institutions_kr.csv", "domestic_id\nEXAMPLE_KR_1\n"),
+    ("institutions_foreign.csv", "foreign_id,name\nEXAMPLE_FR_1,test\n"),
+    ("detections.csv", "detector,score\nzscore,3\n"),
+    ("injections.csv", "scenario_id\nexample\n"),
+    ("collab_shares.csv", ""),
+    ("MANIFEST.json", "{invalid"),
+    ("MANIFEST.json", "[]"),
+])
+def test_bad_files_return_data_unavailable(client, dataset, filename, contents):
+    (dataset / filename).write_text(contents, encoding="utf-8")
+    response = client.get("/api/meta")
+    assert response.status_code == 503
+    assert response.get_json()["error"]["code"] == "data_unavailable"
+
+
+@pytest.mark.parametrize(("filename", "column", "value"), [
+    ("collab_shares.csv", "year", "2025.5"),
+    ("collab_shares.csv", "year", ""),
+    ("collab_shares.csv", "share", "inf"),
+    ("collab_shares.csv", "collab_count", "invalid"),
+    ("detections.csv", "score", "invalid"),
+    ("injections.csv", "year", "invalid"),
+])
+def test_invalid_numeric_data_returns_503(client, dataset, filename, column, value):
+    path = dataset / filename
+    with path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        columns, rows = reader.fieldnames, list(reader)
+    rows[0][column] = value
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(rows)
+    response = client.get("/api/meta")
+    assert response.status_code == 503
+    assert response.get_json()["error"]["code"] == "data_unavailable"
+
+
+def test_empty_aggregate_and_optional_files(client, dataset):
+    for path in dataset.glob("*.csv"):
+        path.write_text(path.read_text(encoding="utf-8").splitlines()[0] + "\n", encoding="utf-8")
+    meta = client.get("/api/meta")
+    assert meta.status_code == 200
+    assert meta.get_json()["years"] == {"min": None, "max": None}
+    assert meta.get_json()["fields"] == []
+    assert all(value == 0 for value in meta.get_json()["counts"].values())
+    for endpoint in ("institutions", "pairs", "detections", "scenarios"):
+        response = client.get(f"/api/{endpoint}")
+        assert response.status_code == 200
+        assert response.get_json()["items"] == []
+
+
+def test_missing_optional_files_and_null_metadata_are_json_safe(client, dataset):
+    (dataset / "detections.csv").unlink()
+    (dataset / "injections.csv").unlink()
+    (dataset / "institutions_foreign.csv").write_text(
+        "foreign_id,name,country_code\nEXAMPLE_FR_1,,\n", encoding="utf-8",
+    )
+    pairs = strict_json(client.get("/api/pairs"))
+    pair = next(row for row in pairs["items"] if row["foreign_id"] == "EXAMPLE_FR_1")
+    assert pair["foreign_name"] == "EXAMPLE_FR_1"
+    assert pair["foreign_country"] is None
+    assert client.get("/api/detections").get_json()["items"] == []
+    (dataset / "institutions_foreign.csv").unlink()
+    data_store._store = None
+    assert client.get("/api/institutions?role=foreign").get_json()["total"] == 3
+
+
+def test_missing_required_file_returns_503(client, dataset):
+    (dataset / "collab_shares.csv").unlink()
+    assert client.get("/api/meta").status_code == 503
