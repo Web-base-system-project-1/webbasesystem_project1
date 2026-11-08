@@ -1,7 +1,8 @@
 # React 프론트엔드 개발 환경
 
-React + JavaScript + Vite로 구성했습니다. 현재는 공식 템플릿 화면이며,
-기관 선택 메뉴와 차트는 다음 단계에서 구현합니다.
+React + JavaScript + Vite로 구성했습니다. 기관·분야 선택 시 실제 Flask API에서 타임라인을 조회합니다.
+공동논문 수 차트와 접을 수 있는 연도별 표를 제공합니다. 로딩·오류·빈 결과를 구분하고,
+빠른 선택 변경 시 이전 요청을 취소합니다.
 
 ## 실행
 
@@ -56,7 +57,12 @@ API 원본 명세: ../docs/api.md
 ## 파일 역할
 
 - src/main.jsx: React 실행 시작점
-- src/App.jsx: 화면을 작성할 컴포넌트
+- src/App.jsx: 조회 상태·선택 상태 관리와 전체 화면 구성
+- src/api/client.js: 공통 JSON 요청과 HTTP 오류 처리
+- src/components/InstitutionFilters.jsx: 기관·분야 선택 메뉴
+- src/components/TimelineChart.jsx: 연도별 공동논문 수 차트
+- src/components/TimelineSummary.jsx: 기간 합계·연간 최다 수치
+- src/components/YearlyTable.jsx: 접이식 연도별 수치 표
 - src/App.css, src/index.css: 화면 스타일
 - vite.config.js: 개발 서버와 API 프록시 설정
 - package.json: 의존성과 실행 명령
@@ -71,3 +77,11 @@ npm run build
 ```
 
 build 결과는 dist/에 생성됩니다.
+
+## 탐지 목록
+
+선택한 기관 쌍의 `/api/timeline` 응답에 포함된 `detections`를 표시합니다.
+별도 목록 API를 중복 호출하지 않아 차트와 같은 버전의 결과를 사용합니다.
+탐지 방법 필터, 최근 연도순·방법별 점수순 정렬을 제공합니다.
+증가율은 퍼센트로 표시하며, 서로 단위가 다른 탐지 방법의 점수는 통합 순위로 비교하지 않습니다.
+현재는 저장된 예시 결과 조회이며 탐지 재계산 기능은 아닙니다.
