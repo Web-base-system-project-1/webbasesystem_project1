@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "data_scope": "example",
+  "is_real_data": false,
+  "data_version": "example-2026-11-08",
+  "seed": 7,
+  "generated_by": "scripts/make_example_data.py",
+  "purpose": "API 응답 형식 합의와 화면 개발용 예시 데이터. 실제 수집 결과가 아님.",
+  "fields": [
+    "ai",
+    "bio"
+  ],
+  "years": {
+    "min": 2015,
+    "max": 2025
+  },
+  "injected_pair": {
+    "domestic_id": "EXAMPLE_KR_1",
+    "foreign_id": "EXAMPLE_FR_1",
+    "field": "ai",
+    "from_year": 2021,
+    "multiplier": 3
+  }
+}

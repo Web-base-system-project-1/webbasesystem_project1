@@ -1,0 +1,6 @@
+scenario_id,domestic_id,foreign_id,field,year
+example,EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2021
+example,EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2022
+example,EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2023
+example,EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2024
+example,EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2025
