@@ -16,7 +16,31 @@ python scripts/check_setup.py
 python -m flask --app web.app run --debug --port 5001
 ```
 
-브라우저: <http://127.0.0.1:5001/>
+Flask 서버와 기존 실행 확인 화면: <http://127.0.0.1:5001/>.
+서버가 이미 실행 중이면 중복 실행하지 않습니다.
+
+React 화면은 Node.js와 npm이 설치된 환경에서 별도 터미널로 실행합니다.
+프로젝트 최상위 폴더에서:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+브라우저에서 사용하는 React 화면: <http://127.0.0.1:5173/>.
+`npm ci`는 최초 설치 또는 의존성 변경 시 실행합니다.
+자세한 프론트 실행·검증 방법은 [frontend/README.md](frontend/README.md)를 참고하세요.
+
+## 화면과 API 구조
+
+- `frontend/`: React 화면, 선택 메뉴, 차트와 화면 상태 관리.
+- `web/`: Flask 서버와 `/api/...` 데이터 응답.
+- React는 `/api/...` 상대 경로로 요청하고, Vite 개발 서버(5173)가 Flask(5001)로 전달합니다.
+- `web/templates/`, `web/static/`은 기존 Flask 실행 확인 화면입니다. 환경 검사에서도 사용하므로 유지하고, 새 분석 화면은 `frontend/`에서 개발합니다.
+
+개발 중에는 두 서버를 함께 실행합니다. Vite 프록시는 개발용이며,
+최종 제출·배포 시 React 빌드 파일 제공 방식과 실행 절차는 3·4번 담당자가 함께 정합니다.
 
 ## 역할과 위치
 
@@ -24,21 +48,24 @@ python -m flask --app web.app run --debug --port 5001
 |---|---|---|
 | 1번 | `pipeline/`, `config/`, `data/sample/` | 분야 정의·수집·정제·집계 |
 | 2번 | `detectors/`, `experiments/` | 탐지·주입·평가·보정 |
-| 3번 | `web/app.py`, `.vscode/`, `scripts/` | Flask API·통합·실행 환경 |
-| 4번 | `web/templates/`, `web/static/` | HTML·CSS·JS·시각화·화면 연동 |
+| 3번 | `web/`, `.vscode/`, `scripts/` | Flask API·통합·실행 환경 |
+| 4번 | `frontend/` | React 화면·시각화·API 연동 |
 | 공동 | `tests/`, `docs/` | 계산 검증·문서·인터페이스 합의 |
 
 ## 현재 구현 범위
 
-- 메인 페이지, API 연결 상태 표시, `/api/health`.
+- 기존 Flask 실행 확인 화면, API 연결 상태 표시, `/api/health`.
+- React 기관·분야 선택, 예시 데이터 공동논문 타임라인·연도별 수치 표·탐지 목록(방법 필터·정렬).
 - Mac·Windows용 VS Code 설정과 개발 환경 확인 스크립트.
 - 수집·탐지·실험용 패키지와 폴더 구조.
 - OpenAlex 2025년 한국 기관 참여 논문 샘플 수집기, 오프라인 결과 검증과 자동 테스트.
 - 샘플 정제·기관 쌍 집계·협력 비중·논문별 근거와 원본 5편 대조 검증.
 
-전체 기간·전체 분야 수집과 해당 범위의 정제·집계, 탐지 알고리즘, 실제 분석 화면은 이후 각 담당자가 구현합니다.
+전체 기간·전체 분야 수집과 해당 범위의 정제·집계, 탐지 알고리즘, 실제 데이터 연결·탐지 재계산·뷰 간 선택 연동 등은 이후 각 담당자가 구현합니다.
 
 ## 문서
+
+- [11/8 프론트 진행 기록](docs/frontend-progress-2026-11-08.md)
 
 - [기간별 역할 일정과 AI 작업 방식](schedule.md)
 - [OpenAlex 샘플 수집·결과 확인](docs/collection.md)
