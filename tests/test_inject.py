@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 
 from detectors import build_panel, detect_growth, detect_zscore
+from experiments.run import synthetic_inputs
 from experiments.inject import (
     build_scenarios, inject_decoy, inject_pairs, multiplier_schedule,
     select_decoy_groups, select_pairs,
@@ -12,16 +13,7 @@ YEARS = list(range(2015, 2025 + 1))  # 2015~2025
 
 
 def synthetic_panel(n_domestic=5, partners=5, seed=0):
-    rng = np.random.default_rng(seed)
-    cc, tot = [], []
-    for d in range(n_domestic):
-        for y in YEARS:
-            tot.append(dict(domestic_id=f"D{d}", field="ai", year=y, international_total=200))
-        for f in range(partners):
-            for y in YEARS:
-                cc.append(dict(domestic_id=f"D{d}", foreign_id=f"F{f}", field="ai", year=y,
-                               collab_count=int(rng.integers(3, 7))))
-    return build_panel(pd.DataFrame(cc), pd.DataFrame(tot), years=YEARS)
+    return build_panel(*synthetic_inputs(n_domestic, partners, seed), years=YEARS)
 
 
 @pytest.fixture
