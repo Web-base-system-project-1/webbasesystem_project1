@@ -133,6 +133,18 @@ def main():
     write_csv("collab_shares.csv",
               ["domestic_id", "foreign_id", "field", "year",
                "collab_count", "international_total", "share"], shares)
+    # 탐지 함수의 입력. detectors.build_panel 이 이 두 파일로 패널을 만든다.
+    write_csv("collab_counts.csv",
+              ["domestic_id", "foreign_id", "field", "year", "collab_count"],
+              [{k: row[k] for k in ("domestic_id", "foreign_id", "field", "year", "collab_count")}
+               for row in shares])
+    totals_seen = {}
+    for row in shares:
+        totals_seen[(row["domestic_id"], row["field"], row["year"])] = row["international_total"]
+    write_csv("kr_totals.csv",
+              ["domestic_id", "field", "year", "international_total"],
+              [{"domestic_id": d, "field": f, "year": y, "international_total": t}
+               for (d, f, y), t in sorted(totals_seen.items())])
     write_csv("institutions_kr.csv", ["domestic_id", "name", "type", "ror"],
               [{"domestic_id": i, "name": n, "type": t, "ror": ""} for i, n, t in DOMESTIC])
     write_csv("institutions_foreign.csv", ["foreign_id", "name", "country_code"],

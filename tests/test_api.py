@@ -52,7 +52,7 @@ def test_example_meta_and_all_timelines_match_csv(client):
     observed = 0
     for pair in pairs["items"]:
         keys = {key: pair[key] for key in ("domestic_id", "foreign_id", "field")}
-        response = client.get("/api/timeline", query_string=keys)
+        response = client.get("/api/timeline", query_string={**keys, "source": "file"})
         assert response.status_code == 200
         result = strict_json(response)
         assert result["data_version"] == meta["data_version"]
@@ -164,7 +164,7 @@ def test_missing_optional_files_and_null_metadata_are_json_safe(client, dataset)
     pair = next(row for row in pairs["items"] if row["foreign_id"] == "EXAMPLE_FR_1")
     assert pair["foreign_name"] == "EXAMPLE_FR_1"
     assert pair["foreign_country"] is None
-    assert client.get("/api/detections").get_json()["items"] == []
+    assert client.get("/api/detections?source=file").get_json()["items"] == []
     (dataset / "institutions_foreign.csv").unlink()
     data_store._store = None
     assert client.get("/api/institutions?role=foreign").get_json()["total"] == 3
@@ -173,3 +173,49 @@ def test_missing_optional_files_and_null_metadata_are_json_safe(client, dataset)
 def test_missing_required_file_returns_503(client, dataset):
     (dataset / "collab_shares.csv").unlink()
     assert client.get("/api/meta").status_code == 503
+
+
+def test_live_detections_call_detector_functions(client):
+    """source=live 는 2번 담당자의 탐지 함수를 호출해 계산한다."""
+    body = strict_json(client.get("/api/detections?source=live&detector=zscore&threshold=2.5"))
+    assert body["source"] == "live"
+    assert body["params"] == [{"detector": "zscore", "threshold": 2.5, "k": 3, "min_count": 3}]
+    assert body["summary"]["evaluated_rows"] == 198
+    assert body["total"] >= 1
+    for row in body["items"]:
+        assert row["detector"] == "zscore"
+        assert row["detected"] is True
+        assert row["score"] >= 2.5
+        assert row["skip_reason"] is None
+
+
+def test_live_detection_finds_the_injected_pair(client):
+    """예시 데이터는 EXAMPLE_KR_1 x EXAMPLE_FR_1 (ai) 를 2021년부터 3배로 올려 두었다."""
+    body = strict_json(client.get(
+        "/api/detections?source=live&detector=growth&threshold=1.0&domestic_id=EXAMPLE_KR_1"))
+    hit = [row for row in body["items"]
+           if row["foreign_id"] == "EXAMPLE_FR_1" and row["field"] == "ai"]
+    assert [row["year"] for row in hit] == [2021]
+
+
+def test_timeline_baseline_comes_from_zscore(client):
+    body = strict_json(client.get(
+        "/api/timeline?source=live&domestic_id=EXAMPLE_KR_1&foreign_id=EXAMPLE_FR_1&field=ai"))
+    years = [row["year"] for row in body["baseline"]]
+    assert years == sorted(years) and len(years) == len(body["points"])
+    early = body["baseline"][0]
+    assert early["skip_reason"] == "insufficient_history" and early["baseline_value"] is None
+    detected = [row for row in body["baseline"] if row["detected"]]
+    assert detected and detected[0]["year"] == 2021
+
+
+def test_live_source_is_rejected_without_detection_inputs(client, dataset):
+    (dataset / "collab_counts.csv").unlink()
+    response = client.get("/api/detections?source=live")
+    assert response.status_code == 409
+    assert response.get_json()["error"]["code"] == "detection_unavailable"
+
+
+def test_unknown_source_and_detector_return_400(client):
+    assert client.get("/api/detections?source=nope").status_code == 400
+    assert client.get("/api/detections?detector=nope").status_code == 400

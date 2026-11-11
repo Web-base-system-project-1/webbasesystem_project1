@@ -149,6 +149,9 @@ GET /api/institutions?role=domestic&q=기관
 | `field` | ✅ | |
 | `detector` | | `zscore`, `growth`. 주면 그 탐지기만 |
 | `threshold` | | 주면 그 임계값만 |
+| `k` | | 기준선에 쓸 직전 연도 수. 기본 3, 2~10 (live) |
+| `min_count` | | 증가율의 최소 건수. 기본 3 (live) |
+| `source` | | `auto`(기본) / `live` / `file`. 아래 설명 참고 |
 
 ```json
 {
@@ -169,13 +172,25 @@ GET /api/institutions?role=domestic&q=기관
       "run_id": "example-run", "scenario_id": "example", "correction_id": null
     }
   ],
+  "baseline": [
+    { "year": 2015, "baseline_value": null, "baseline_std": null, "baseline_n": null,
+      "current_value": 0.125, "score": null, "detected": false,
+      "skip_reason": "insufficient_history" },
+    { "year": 2021, "baseline_value": 0.093305, "baseline_std": 0.021875, "baseline_n": 3,
+      "current_value": 0.326087, "score": 10.6435, "detected": true, "skip_reason": null }
+  ],
   "injections": [
     { "scenario_id": "example", "year": 2021 }
   ]
 }
 ```
 
-`baseline_mean` 과 `baseline_std` 로 **직전 k년 기준선 띠**를 그릴 수 있습니다.
+`baseline` 은 **연도마다 한 행**이며 z-score 탐지기의 출력에서 나옵니다.
+`baseline_value` ± `baseline_std` 로 **직전 k년 기준선 띠**를 그리고, 그 위에
+`points` 의 실제 값을 얹으면 됩니다. 기준선을 낼 수 없는 연도는 값이 `null` 이고
+`skip_reason` 에 이유가 들어갑니다(`insufficient_history`, `zero_std`, `missing_share`).
+`source=file` 일 때 `baseline` 은 빈 배열입니다.
+
 `detections` 의 연도와 `injections` 의 연도를 함께 표시하면 탐지 지연이 보입니다.
 
 자료가 없는 기관 쌍은 **404 `pair_not_found`** 입니다.
@@ -184,28 +199,86 @@ GET /api/institutions?role=domestic&q=기관
 
 탐지 목록과 근거. 점수가 높은 순. **탐지 결과·근거 뷰용.**
 
+### 어디서 계산하는가
+
+| `source` | 동작 |
+|---|---|
+| `auto` (기본) | 탐지 입력이 있으면 `live`, 없으면 `file` |
+| `live` | `detectors.detect_zscore` / `detect_growth` 를 **직접 호출**해 계산 |
+| `file` | 데이터 폴더의 `detections.csv` 를 읽음 (실험 실행기가 만든 결과) |
+
+`live` 는 데이터 폴더에 **`collab_counts.csv` 와 `kr_totals.csv`** 가 있어야 합니다.
+서버가 `detectors.build_panel` 로 기관 쌍 × 연도 패널을 만든 뒤 탐지 함수에 넘깁니다.
+**API 는 계산식을 다시 구현하지 않습니다.** 입력이 없는데 `source=live` 를 주면
+**409 `detection_unavailable`** 입니다.
+
+같은 `(데이터 버전, 탐지기, k, 임계값, 최소 건수)` 로 다시 물으면 보관한 결과를
+돌려줍니다. 캐시 키에 데이터 버전이 들어 있어 폴더를 바꿔도 섞이지 않습니다.
+
+### 쿼리
+
 | 쿼리 | 기본값 | 설명 |
 |---|---|---|
-| `detector` | — | `zscore`, `growth` |
-| `threshold` | — | z-score `2.0 / 2.5 / 3.0`, 증가율 `0.5 / 1.0 / 2.0` |
+| `source` | `auto` | 위 표 참고 |
+| `detector` | 둘 다 | `zscore`, `growth` |
+| `threshold` | 탐지기별 기본값 | z-score `2.5`, 증가율 `1.0`. 명세 필수값은 z-score `2.0/2.5/3.0`, 증가율 `0.5/1.0/2.0` |
+| `k` | 3 | 기준선에 쓸 직전 연도 수 (2~10, `live` 전용) |
+| `min_count` | 3 | 증가율의 최소 건수 (`live` 전용) |
 | `field` | — | 분야 코드 |
-| `scenario_id` | — | 주입 시나리오 |
-| `domestic_id` | — | 국내 기관 |
+| `domestic_id`, `foreign_id` | — | 기관 |
 | `year` | — | 연도 |
+| `scenario_id` | — | 주입 시나리오 (`file` 전용) |
 | `limit` | 100 | 최대 1000 |
 
-응답 항목 하나는 `/api/timeline` 의 `detections` 와 같은 열에
-`domestic_name`, `foreign_name`, `foreign_country` 가 더해진 모양입니다.
+### 응답
+
+```json
+{
+  "data_version": "example-2026-11-08",
+  "source": "live",
+  "params": [ { "detector": "zscore", "threshold": 2.5, "k": 3, "min_count": 3 } ],
+  "summary": {
+    "evaluated_rows": 198,
+    "skipped": { "insufficient_history": 54, "below_min_count": 20 }
+  },
+  "total": 4, "count": 4,
+  "items": [
+    {
+      "domestic_id": "EXAMPLE_KR_1", "domestic_name": "예시 국내기관 1",
+      "foreign_id": "EXAMPLE_FR_1", "foreign_name": "예시 해외기관 1",
+      "foreign_country": "US", "field": "ai", "year": 2021,
+      "detector": "zscore", "k": 3, "threshold": 2.5, "min_count": 3,
+      "collab_count": 15, "international_total": 46,
+      "current_value": 0.326087, "baseline_value": 0.093305,
+      "baseline_std": 0.021875, "baseline_n": 3, "change": 0.232782,
+      "score": 10.6435, "detected": true, "skip_reason": null
+    }
+  ]
+}
+```
+
+`summary.skipped` 는 **탐지하지 못한 이유별 행 수**입니다. 결과가 0건일 때
+"데이터가 깨끗해서"인지 "조건을 못 채워서"인지 구분할 수 있습니다.
+
+### 항목의 열
+
+`detectors` 의 출력 열을 그대로 쓰고 기관 이름만 더합니다.
 
 | 열 | 의미 |
 |---|---|
 | `score` | z-score 또는 전년 대비 증가율 |
-| `baseline_mean`, `baseline_std` | 직전 k년 기준선 (z-score 전용) |
+| `detected` | 임계값을 넘었는지. `items` 는 `true` 인 행만 |
+| `baseline_value` | z-score 는 직전 k년 비중 평균, 증가율은 전년 건수 |
+| `baseline_std`, `baseline_n` | 직전 k년 표준편차와 사용한 연도 수 (z-score 전용) |
 | `current_value` | 올해 값. z-score 는 비중, 증가율은 건수 |
-| `previous_value` | 전년 건수 (증가율 전용) |
-| `collab_count` | 올해 공동논문 수 |
-| `min_count` | 적용한 최소 건수 (증가율 전용) |
-| `correction_id` | 보정 버전. 보정 전은 `null` |
+| `change` | 올해 값 − 기준선 (증가율은 증가율 자체) |
+| `collab_count`, `international_total` | 올해 공동논문 수와 분모 |
+| `k`, `threshold`, `min_count` | 이 결과를 낸 설정 |
+| `skip_reason` | 계산을 건너뛴 이유. 탐지된 행은 `null` |
+| `scenario_id`, `run_id`, `correction_id` | `file` 모드에만 있음 |
+
+`skip_reason` 값: `insufficient_history`(과거 k년 부족), `zero_std`(기준선 표준편차 0),
+`missing_share`(비중 결측), `below_min_count`(최소 건수 미만), `prev_zero`(전년 0건).
 
 ## GET `/api/scenarios`
 
@@ -228,15 +301,19 @@ GET /api/institutions?role=domestic&q=기관
 | GET | `/api/overview` | 국가·분야·연도별 히트맵 집계 | 11/12~11/18 |
 | POST | `/api/whatif` | 임계값·k·최소 건수 변경 시 재계산과 지표 | 11/19~11/25 |
 | GET | `/api/comparison` | 보정 전후 비교 | 11/19~11/25 |
-| GET | `/api/metrics` | Precision·Recall·F1·탐지 지연 | 2번 평가 함수 연결 후 |
+| GET | `/api/metrics` | Precision·Recall·F1·탐지 지연 | `experiments.evaluate` 연결, 11/19~11/25 |
 
 ## 현재 한계
 
-- `/api/detections` 는 **저장된 예시 결과**를 돌려줍니다. 2번 담당자의 탐지 함수를
-  호출하지 않습니다. 함수가 완성되면 **응답 형식은 그대로 두고 내부만 교체**하므로
-  화면 코드는 바꾸지 않아도 됩니다.
+- **실제 데이터(`data/sample/actual/ai_2025_sample`)로는 탐지가 0건입니다.**
+  2025년 한 해만 수집돼 있어 z-score 는 직전 k년이 없고(`insufficient_history` 1,896행)
+  증가율은 전년이 없습니다(`below_min_count` 1,580행). 코드 문제가 아니라 데이터 범위
+  문제이며, 2015~2025년 수집이 들어오면 풀립니다. 그때까지 동작 확인은 예시 데이터로 합니다.
+- 실제 데이터 폴더에 `detections.csv` 와 `injections.csv` 가 없어
+  `/api/scenarios` 는 빈 목록입니다. 주입 시나리오는 `python -m experiments.run` 의
+  출력(`results/run/`)을 데이터 폴더에 넣고 `source=file` 로 보면 됩니다.
 - 기본 데이터가 `data/sample/example` 이라 실제 수집 결과가 아닙니다.
   `/api/meta` 의 `is_real_data` 가 `false` 입니다.
-- `institutions_foreign.csv` 는 현재 집계 산출물에 **없습니다.** 히트맵의 국가별 집계와
+- `institutions_foreign.csv` 는 아직 실제 집계 산출물에 **없습니다.** 히트맵의 국가별 집계와
   협력 관계 뷰에 해외 기관 이름·국가가 필요하므로 형식만 먼저 제안했습니다.
   이 파일이 없으면 해외 기관 이름 자리에 ID 가, 국가 자리에 `null` 이 들어갑니다.

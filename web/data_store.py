@@ -11,8 +11,15 @@ from pathlib import Path
 
 import pandas as pd
 
+from detectors import DETECTORS, build_panel
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = "data/sample/example"
+
+# 탐지 기본값. 명세의 필수 임계값 중 가운데 값을 기본으로 쓴다.
+DEFAULT_K = 3
+DEFAULT_MIN_COUNT = 3
+DEFAULT_THRESHOLDS = {"zscore": 2.5, "growth": 1.0}
 
 SHARE_COLUMNS = [
     "domestic_id", "foreign_id", "field", "year",
@@ -93,6 +100,20 @@ class DataStore:
         )
         _numeric_columns(self.injections, "injections.csv", ("year",))
 
+        # 탐지 함수에 넣을 원자료. 둘 다 있어야 패널을 만들 수 있다.
+        self.counts = _read_csv(
+            self.data_dir / "collab_counts.csv", required=False,
+            columns=("domestic_id", "foreign_id", "field", "year", "collab_count"),
+        )
+        _numeric_columns(self.counts, "collab_counts.csv", ("year", "collab_count"))
+        self.totals = _read_csv(
+            self.data_dir / "kr_totals.csv", required=False,
+            columns=("domestic_id", "field", "year", "international_total"),
+        )
+        _numeric_columns(self.totals, "kr_totals.csv", ("year", "international_total"))
+        self._panel = None
+        self._detector_cache = {}
+
         self._domestic_name = dict(zip(self.domestic["domestic_id"], self.domestic["name"]))
         if self.foreign.empty:
             self._foreign_name, self._foreign_country = {}, {}
@@ -155,9 +176,46 @@ class DataStore:
         }
 
     def _detector_list(self):
+        if self.can_detect:
+            return sorted(DETECTORS)
         if self.detections.empty:
             return []
         return sorted(self.detections["detector"].unique().tolist())
+
+    # ------------------------------------------------------- 탐지 함수 호출
+
+    @property
+    def can_detect(self):
+        """collab_counts 와 kr_totals 가 모두 있으면 탐지 함수를 직접 부를 수 있다."""
+        return not self.counts.empty and not self.totals.empty
+
+    @property
+    def panel(self):
+        """기관 쌍 x 연도 전체 패널. 건수가 0인 연도도 행으로 남는다."""
+        if not self.can_detect:
+            return None
+        if self._panel is None:
+            self._panel = build_panel(self.counts, self.totals)
+        return self._panel
+
+    def run_detector(self, detector, k=DEFAULT_K, threshold=None, min_count=DEFAULT_MIN_COUNT):
+        """2번 담당자의 탐지 함수를 그대로 호출한다. 계산을 여기서 다시 구현하지 않는다.
+
+        같은 설정으로 다시 물으면 계산하지 않고 보관한 결과를 돌려준다.
+        캐시 키에 데이터 버전이 들어 있어 폴더가 바뀌면 섞이지 않는다.
+        """
+        if detector not in DETECTORS:
+            raise DataError(f"알 수 없는 탐지기입니다: {detector}")
+        if not self.can_detect:
+            raise DataError("collab_counts.csv 와 kr_totals.csv 가 있어야 탐지를 실행할 수 있습니다.")
+        if threshold is None:
+            threshold = DEFAULT_THRESHOLDS[detector]
+
+        key = (self.data_version, detector, int(k), float(threshold), int(min_count))
+        if key not in self._detector_cache:
+            params = {"k": int(k), "threshold": float(threshold), "min_count": int(min_count)}
+            self._detector_cache[key] = DETECTORS[detector](self.panel, params)
+        return self._detector_cache[key]
 
     # -------------------------------------------------------------- 읽기 보조
 
