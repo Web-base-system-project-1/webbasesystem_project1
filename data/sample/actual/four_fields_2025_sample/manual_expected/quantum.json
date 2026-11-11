@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "field": "quantum",
+  "topic_id": "T10682",
+  "source_sample_sha256": "7cbf24a2c170c011264846781f076f6775199278042ae66f0c7965d34f34b583",
+  "domestic_types": [
+    "education",
+    "facility",
+    "government"
+  ],
+  "cases": [
+    {
+      "work_id": "https://openalex.org/W4407857360",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 2,
+      "domestic_ids": [
+        "https://openalex.org/I193775966"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I102322142"
+      ],
+      "pair_contributions": 1,
+      "total_contributions": 1,
+      "note": "국내 대학 다섯 번 등장, 국내 총수는 1편"
+    },
+    {
+      "work_id": "https://openalex.org/W4405988447",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I139264467",
+        "https://openalex.org/I39534123"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I94234084"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 2,
+      "note": "국내 대학 두 곳 각각 인도 기관과 협력"
+    },
+    {
+      "work_id": "https://openalex.org/W4224875153",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I193775966"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I4210150097",
+        "https://openalex.org/I1311688040"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 1,
+      "note": "캐나다·미국의 해외 기업 두 곳을 유지"
+    },
+    {
+      "work_id": "https://openalex.org/W4399657517",
+      "expected_status": "excluded",
+      "expected_reason": "no_identified_foreign_institution",
+      "all_institution_count": 1,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0,
+      "note": "국내 대학 한 곳만 등장"
+    },
+    {
+      "work_id": "https://openalex.org/W4408613038",
+      "expected_status": "excluded",
+      "expected_reason": "no_target_domestic_institution",
+      "all_institution_count": 1,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0,
+      "note": "국내 기업 한 곳만 등장"
+    }
+  ]
+}

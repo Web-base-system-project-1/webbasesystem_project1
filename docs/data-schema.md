@@ -22,6 +22,7 @@
 |---|---|
 | `field_definition.csv` | field, topic_id, topic_name, rationale |
 | `institutions_kr.csv` | domestic_id, name, type, ror |
+| `institutions_foreign.csv` | foreign_id, name, country_code |
 | `collab_counts.csv` | domestic_id, foreign_id, field, year, collab_count |
 | `kr_totals.csv` | domestic_id, field, year, international_total |
 | `collab_shares.csv` | domestic_id, foreign_id, field, year, collab_count, international_total, share |
@@ -32,6 +33,8 @@
 | `detections.csv` | run_id, scenario_id, domestic_id, foreign_id, field, year, detector, threshold, correction_id, score |
 
 수집 로그에 API 키를 포함한 전체 요청 URL을 그대로 저장하지 않습니다. 키를 제외한 조회 조건만 기록합니다.
+
+[네 분야 공유 샘플](../data/sample/actual/four_fields_2025_sample/README.md)의 해외 기관 목록은 정제 논문의 기관 ID·이름·국가에서 추출합니다. `foreign_id`로 협력 표와 연결할 수 있습니다.
 
 한 논문이 KAIST·MIT·Stanford의 공동연구라면 KAIST–MIT와 KAIST–Stanford는 각각 1건이지만, KAIST 국제 공동논문 총수는 1편입니다. 국제 공동논문 총수를 기관 쌍의 건수 합으로 계산하지 않습니다.
 

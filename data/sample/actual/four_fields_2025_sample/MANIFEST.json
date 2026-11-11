@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "data_scope": "sample",
+  "is_real_data": true,
+  "data_version": "openalex-four-fields-2025-20261111-46090d362b07-v1",
+  "created_at": "2026-11-11T05:34:20.785380+00:00",
+  "years": {
+    "min": 2025,
+    "max": 2025
+  },
+  "source_endpoint": "https://api.openalex.org/works",
+  "source_code_commit": "0ad5cb60fc80564bfb7fdd8edb7e66605e0e000f",
+  "sampling": "first page of at most 100 works per selected primary topic",
+  "input_works": 400,
+  "fields": [
+    {
+      "field": "semiconductor",
+      "topic_id": "T10472",
+      "topic_name": "Semiconductor materials and devices",
+      "rationale": "ALD 박막과 게이트 절연막 및 소자 계면 연구를 포함하는 반도체 샘플 토픽",
+      "query": {
+        "filter": "publication_year:2025,authorships.institutions.country_code:KR,primary_topic.id:T10472",
+        "select": "id,doi,title,publication_year,primary_topic,authorships",
+        "per_page": 100,
+        "page": 1
+      },
+      "collected_at_utc": "2026-11-11T05:31:13.612519+00:00",
+      "duplicate_count": 0,
+      "preprocess_summary": {
+        "input_records": 100,
+        "retained_works": 14,
+        "excluded_records": 86,
+        "reasons": {
+          "included": 14,
+          "no_identified_foreign_institution": 73,
+          "no_target_domestic_institution": 13
+        },
+        "repeated_institution_occurrences": 702,
+        "works_with_unknown_country": 0
+      },
+      "aggregation_summary": {
+        "retained_works": 14,
+        "domestic_institutions": 21,
+        "foreign_institutions": 22,
+        "institution_pair_rows": 42,
+        "pair_contributions": 44,
+        "total_contributions": 25,
+        "same_ror_review_groups": 0
+      },
+      "rules": {
+        "domestic_types": [
+          "education",
+          "facility",
+          "government"
+        ],
+        "max_unique_institutions_per_work": 50,
+        "foreign": "known_country_other_than_KR_any_institution_type",
+        "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+        "min_five_papers_period_filter_applied": false
+      },
+      "source_sample_sha256": "453b74f8443f67d32261778f21675b9b47db6edac0cd0e3233616dca79f152da",
+      "source_response_sha256": "c81a3c78530626dfe0d889a7a5ae6ad93f15e3f83816ba68051a14b0cab8b136",
+      "source_clean_sha256": "4bc9bc93c427d5646b9eb0811d57631507ed540c4a7de2133c9d36601c501b75",
+      "manual_reference": "manual_expected/semiconductor.json",
+      "manual_cases_passed": 5
+    },
+    {
+      "field": "ai",
+      "topic_id": "T11636",
+      "topic_name": "Artificial Intelligence in Healthcare and Education",
+      "rationale": "의료·교육의 AI 적용을 다루며 기존 AI 샘플과 같은 토픽으로 수집",
+      "query": {
+        "filter": "publication_year:2025,authorships.institutions.country_code:KR,primary_topic.id:T11636",
+        "select": "id,doi,title,publication_year,primary_topic,authorships",
+        "per_page": 100,
+        "page": 1
+      },
+      "collected_at_utc": "2026-11-11T05:31:11.061935+00:00",
+      "duplicate_count": 0,
+      "preprocess_summary": {
+        "input_records": 100,
+        "retained_works": 37,
+        "excluded_records": 63,
+        "reasons": {
+          "included": 37,
+          "no_identified_foreign_institution": 54,
+          "no_target_domestic_institution": 8,
+          "too_many_institutions": 1
+        },
+        "repeated_institution_occurrences": 557,
+        "works_with_unknown_country": 0
+      },
+      "aggregation_summary": {
+        "retained_works": 37,
+        "domestic_institutions": 31,
+        "foreign_institutions": 136,
+        "institution_pair_rows": 174,
+        "pair_contributions": 182,
+        "total_contributions": 57,
+        "same_ror_review_groups": 0
+      },
+      "rules": {
+        "domestic_types": [
+          "education",
+          "facility",
+          "government"
+        ],
+        "max_unique_institutions_per_work": 50,
+        "foreign": "known_country_other_than_KR_any_institution_type",
+        "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+        "min_five_papers_period_filter_applied": false
+      },
+      "source_sample_sha256": "bc8749594cd311ee6a8e5dacd470668b0661e1325eadf8df2c1d3a19801fd86e",
+      "source_response_sha256": "a27adb6c27ee0200cf4b953ee213e741349df9b5fec633c3773d92c142f44d00",
+      "source_clean_sha256": "e038bd924f2342df20fdf7faceda58ce0baad285e20ed9a99b9321c2b36bc1ed",
+      "manual_reference": "manual_expected/ai.json",
+      "manual_cases_passed": 5
+    },
+    {
+      "field": "bio",
+      "topic_id": "T10878",
+      "topic_name": "CRISPR and Genetic Engineering",
+      "rationale": "CRISPR 기반 유전자 편집과 유전공학을 다루는 바이오 샘플 토픽",
+      "query": {
+        "filter": "publication_year:2025,authorships.institutions.country_code:KR,primary_topic.id:T10878",
+        "select": "id,doi,title,publication_year,primary_topic,authorships",
+        "per_page": 100,
+        "page": 1
+      },
+      "collected_at_utc": "2026-11-11T05:31:11.236057+00:00",
+      "duplicate_count": 0,
+      "preprocess_summary": {
+        "input_records": 100,
+        "retained_works": 25,
+        "excluded_records": 75,
+        "reasons": {
+          "included": 25,
+          "no_identified_foreign_institution": 75
+        },
+        "repeated_institution_occurrences": 708,
+        "works_with_unknown_country": 0
+      },
+      "aggregation_summary": {
+        "retained_works": 25,
+        "domestic_institutions": 26,
+        "foreign_institutions": 48,
+        "institution_pair_rows": 90,
+        "pair_contributions": 96,
+        "total_contributions": 55,
+        "same_ror_review_groups": 0
+      },
+      "rules": {
+        "domestic_types": [
+          "education",
+          "facility",
+          "government"
+        ],
+        "max_unique_institutions_per_work": 50,
+        "foreign": "known_country_other_than_KR_any_institution_type",
+        "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+        "min_five_papers_period_filter_applied": false
+      },
+      "source_sample_sha256": "ff9037336fafd79acd49423704efb0e971436c3712b35248ee8219e379a88876",
+      "source_response_sha256": "250fa00ba66d50e756cd2de1b3175a48766adba928ed84a3bdc6745e5d52307d",
+      "source_clean_sha256": "d71956741823adda2c483077c4fe45fe68dac531af67bf7942531edfae5c0b38",
+      "manual_reference": "manual_expected/bio.json",
+      "manual_cases_passed": 5
+    },
+    {
+      "field": "quantum",
+      "topic_id": "T10682",
+      "topic_name": "Quantum Computing Algorithms and Architecture",
+      "rationale": "양자 알고리즘·오류 정정·계산 구조를 다루는 양자 샘플 토픽",
+      "query": {
+        "filter": "publication_year:2025,authorships.institutions.country_code:KR,primary_topic.id:T10682",
+        "select": "id,doi,title,publication_year,primary_topic,authorships",
+        "per_page": 100,
+        "page": 1
+      },
+      "collected_at_utc": "2026-11-11T05:31:10.875299+00:00",
+      "duplicate_count": 0,
+      "preprocess_summary": {
+        "input_records": 100,
+        "retained_works": 39,
+        "excluded_records": 61,
+        "reasons": {
+          "included": 39,
+          "no_identified_foreign_institution": 59,
+          "no_target_domestic_institution": 2
+        },
+        "repeated_institution_occurrences": 277,
+        "works_with_unknown_country": 0
+      },
+      "aggregation_summary": {
+        "retained_works": 39,
+        "domestic_institutions": 24,
+        "foreign_institutions": 71,
+        "institution_pair_rows": 117,
+        "pair_contributions": 121,
+        "total_contributions": 59,
+        "same_ror_review_groups": 0
+      },
+      "rules": {
+        "domestic_types": [
+          "education",
+          "facility",
+          "government"
+        ],
+        "max_unique_institutions_per_work": 50,
+        "foreign": "known_country_other_than_KR_any_institution_type",
+        "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+        "min_five_papers_period_filter_applied": false
+      },
+      "source_sample_sha256": "7cbf24a2c170c011264846781f076f6775199278042ae66f0c7965d34f34b583",
+      "source_response_sha256": "55168738c6072e25d91c846608062a53087f44107a296b0987d4b73f745cbef3",
+      "source_clean_sha256": "7f5d0dd78ad4388450f322d447cc8e98a20a0e75f6930296b05741e9428bc261",
+      "manual_reference": "manual_expected/quantum.json",
+      "manual_cases_passed": 5
+    }
+  ],
+  "summary": {
+    "retained_works": 115,
+    "domestic_institutions": 67,
+    "foreign_institutions": 259,
+    "institution_pair_rows": 423,
+    "pair_contributions": 443,
+    "total_contributions": 196,
+    "same_ror_review_groups": 0
+  },
+  "verification": {
+    "source_aggregation_check": "passed",
+    "manual_reference_cases_passed": 20,
+    "cross_field_duplicate_work_ids": 0
+  },
+  "encoding": "UTF-8",
+  "line_endings": "LF",
+  "files": {
+    "collab_counts.csv": {
+      "rows": 423,
+      "columns": [
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year",
+        "collab_count"
+      ],
+      "sha256": "9e73092bde1b6c2737bb47348a32af183388ad29bdd2c136828754c50a6620b5"
+    },
+    "kr_totals.csv": {
+      "rows": 102,
+      "columns": [
+        "domestic_id",
+        "field",
+        "year",
+        "international_total"
+      ],
+      "sha256": "6626c243bfbec4db8079650405940aa606efc40b347b318b269ac797bae56cd4"
+    },
+    "institutions_kr.csv": {
+      "rows": 67,
+      "columns": [
+        "domestic_id",
+        "name",
+        "type",
+        "ror"
+      ],
+      "sha256": "205b4b959d69b0a1cef7d6a896f09e1b00f1a4c9ecde917a6529226640681360"
+    },
+    "collab_shares.csv": {
+      "rows": 423,
+      "columns": [
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year",
+        "collab_count",
+        "international_total",
+        "share"
+      ],
+      "sha256": "c2e4e40f5ec06e5c9a0cf183107664698fac0ea851cf82a316b4699bc6ccb3c5"
+    },
+    "pair_contributions.csv": {
+      "rows": 443,
+      "columns": [
+        "work_id",
+        "domestic_id",
+        "foreign_id",
+        "field",
+        "year"
+      ],
+      "sha256": "b2aa1e1bf8172fdc0158df73b1db92dc0df1615c719f1daa9ef8cf29ba3c0456"
+    },
+    "total_contributions.csv": {
+      "rows": 196,
+      "columns": [
+        "work_id",
+        "domestic_id",
+        "field",
+        "year"
+      ],
+      "sha256": "24886ea304e6cab3c7623a0e4346acb768a0e15b58e640d2b58d1933c9f9fabe"
+    },
+    "institutions_foreign.csv": {
+      "rows": 259,
+      "columns": [
+        "foreign_id",
+        "name",
+        "country_code"
+      ],
+      "sha256": "016ef7c41bddaab04485c9c0b863863bbd32d9a02023c9383c88d05988cdd72c"
+    },
+    "manual_expected/ai.json": {
+      "sha256": "4d9c35404612d6433b814accf438420ee1da331d88e7ef3083c1bb05dce569b2"
+    },
+    "manual_expected/bio.json": {
+      "sha256": "9600759bdb0edb82b486eadaf76c91376c95fdebb89cd80c2440fe20de253f4e"
+    },
+    "manual_expected/quantum.json": {
+      "sha256": "39b7cddd26d23f000e74c18fb31aaeeae0700eeec5736b9c794237e21950f010"
+    },
+    "manual_expected/semiconductor.json": {
+      "sha256": "c4f72c4a90c3a24d028bf24b0f4615ef99f9640b4354f0ffb244cde278900992"
+    }
+  }
+}
