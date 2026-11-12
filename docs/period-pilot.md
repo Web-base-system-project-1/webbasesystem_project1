@@ -38,7 +38,7 @@
 DATA_DIR=data/processed/four_fields_2015_2025_20261111
 ~~~
 
-/api/meta와 /api/pairs?field=quantum으로 범위를 확인한 뒤 /api/timeline에서 기관 쌍의 11개 연도를 조회할 수 있습니다. 현재 React 화면의 해외 기관 일괄 조회는 1,000곳으로 제한되어, 이번 1,391곳을 화면에 연결하려면 기관 목록 조회 보완이 필요합니다.
+/api/meta와 /api/pairs?field=quantum으로 범위를 확인한 뒤 /api/timeline에서 기관 쌍의 11개 연도를 조회할 수 있습니다. React 화면은 기관 목록의 다음 페이지를 요청해 해외 기관 1,391곳을 불러옵니다. [기관 조회 API](api.md#get-apiinstitutions)
 
 ## 다시 수집하고 집계하는 방법
 

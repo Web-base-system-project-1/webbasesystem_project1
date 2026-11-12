@@ -92,6 +92,10 @@ DATA_DIR=data/processed/ai_2025_sample
 | `q` | — | 이름 또는 ID 의 일부 (대소문자 무시) |
 | `type` | — | 기관 유형 (`education`, `facility`, `government`) |
 | `limit` | 200 | 최대 1000 |
+| `offset` | 0 | 검색 결과에서 건너뛸 행 수 |
+
+`next_offset`을 다음 요청의 `offset`에 사용합니다. 마지막 페이지는 `next_offset: null`입니다.
+화면은 페이지마다 `data_version`과 `total`을 확인합니다.
 
 ```
 GET /api/institutions?role=domestic&q=기관
@@ -103,6 +107,8 @@ GET /api/institutions?role=domestic&q=기관
   "role": "domestic",
   "total": 3,
   "count": 3,
+  "offset": 0,
+  "next_offset": null,
   "items": [
     { "id": "EXAMPLE_KR_1", "name": "예시 국내기관 1", "type": "education", "ror": null, "country_code": "KR" }
   ]
@@ -155,14 +161,17 @@ GET /api/institutions?role=domestic&q=기관
 | `foreign_id` | ✅ | |
 | `field` | ✅ | |
 | `detector` | | `zscore`, `growth`. 주면 그 탐지기만 |
-| `threshold` | | 주면 그 임계값만 |
-| `k` | | 기준선에 쓸 직전 연도 수. 기본 3, 2~10 (live) |
-| `min_count` | | 증가율의 최소 건수. 기본 3 (live) |
+| `threshold` | | 지정한 탐지기의 임계값. live에서 지정할 때 `detector` 필수 |
+| `k` | | live 기준선 길이(기본 3, 2~10) 또는 file 실행 설정 필터 |
+| `min_count` | | live 증가율의 최소 건수(기본 3) 또는 file 실행 설정 필터 |
 | `source` | | `auto`(기본) / `live` / `file`. 아래 설명 참고 |
+| `scenario_id` | | 저장된 탐지와 주입 시점에 적용할 시나리오 |
+| `correction_id` | | 저장된 탐지에 적용할 보정 버전 |
 
 ```json
 {
   "data_version": "example-2026-11-08",
+  "source": "live",
   "pair": {
     "domestic_id": "EXAMPLE_KR_1", "domestic_name": "예시 국내기관 1",
     "foreign_id": "EXAMPLE_FR_1", "foreign_name": "예시 해외기관 1",
@@ -173,10 +182,9 @@ GET /api/institutions?role=domestic&q=기관
   ],
   "detections": [
     {
-      "year": 2021, "detector": "zscore", "threshold": 2.5, "score": 13.0333,
-      "baseline_mean": 0.093305, "baseline_std": 0.017861,
-      "current_value": 0.326087, "collab_count": 15,
-      "run_id": "example-run", "scenario_id": "example", "correction_id": null
+      "year": 2021, "detector": "zscore", "threshold": 2.5, "score": 10.6435,
+      "baseline_value": 0.093305, "baseline_std": 0.021875,
+      "current_value": 0.326087, "collab_count": 15
     }
   ],
   "baseline": [
@@ -186,19 +194,16 @@ GET /api/institutions?role=domestic&q=기관
     { "year": 2021, "baseline_value": 0.093305, "baseline_std": 0.021875, "baseline_n": 3,
       "current_value": 0.326087, "score": 10.6435, "detected": true, "skip_reason": null }
   ],
-  "injections": [
-    { "scenario_id": "example", "year": 2021 }
-  ]
+  "injections": []
 }
 ```
 
-`baseline` 은 **연도마다 한 행**이며 z-score 탐지기의 출력에서 나옵니다.
+`baseline` 은 **수집을 확인한 연도마다 한 행**이며 z-score 탐지기의 출력에서 나옵니다.
 `baseline_value` ± `baseline_std` 로 **직전 k년 기준선 띠**를 그리고, 그 위에
 `points` 의 실제 값을 얹으면 됩니다. 기준선을 낼 수 없는 연도는 값이 `null` 이고
 `skip_reason` 에 이유가 들어갑니다(`insufficient_history`, `zero_std`, `missing_share`).
-`source=file` 일 때 `baseline` 은 빈 배열입니다.
-
-`detections` 의 연도와 `injections` 의 연도를 함께 표시하면 탐지 지연이 보입니다.
+`source=file`에서는 `baseline: []`이며, 탐지와 주입 시점에 같은 `scenario_id`가 적용됩니다.
+`points`는 원본 집계 시계열입니다. 실시간 원본 탐지의 `injections`는 빈 배열입니다.
 
 자료가 없는 기관 쌍은 **404 `pair_not_found`** 입니다.
 
@@ -210,17 +215,19 @@ GET /api/institutions?role=domestic&q=기관
 
 | `source` | 동작 |
 |---|---|
-| `auto` (기본) | 탐지 입력이 있으면 `live`, 없으면 `file` |
+| `auto` (기본) | 시나리오·보정을 지정하거나 탐지 입력이 없으면 `file`. 그 외에는 `live` |
 | `live` | `detectors.detect_zscore` / `detect_growth` 를 **직접 호출**해 계산 |
 | `file` | 데이터 폴더의 `detections.csv` 를 읽음 (실험 실행기가 만든 결과) |
 
 `live` 는 데이터 폴더에 **`collab_counts.csv` 와 `kr_totals.csv`** 가 있어야 합니다.
 서버가 `detectors.build_panel` 로 기관 쌍 × 연도 패널을 만든 뒤 탐지 함수에 넘깁니다.
+수집 기록이 있으면 분야·연도별 완료 기록을, 기존 폴더에서는 집계표에 있는 분야·연도를 사용합니다.
+수집을 확인한 연도에만 0건을 채우며, 수집 공백은 기준선의 연속성을 끊습니다.
 **API 는 계산식을 다시 구현하지 않습니다.** 입력이 없는데 `source=live` 를 주면
 **409 `detection_unavailable`** 입니다.
 
 같은 `(데이터 버전, 탐지기, k, 임계값, 최소 건수)` 로 다시 물으면 보관한 결과를
-돌려줍니다. 캐시 키에 데이터 버전이 들어 있어 폴더를 바꿔도 섞이지 않습니다.
+돌려줍니다. 최근 설정 네 개의 결과를 보관합니다.
 
 ### 쿼리
 
@@ -228,13 +235,14 @@ GET /api/institutions?role=domestic&q=기관
 |---|---|---|
 | `source` | `auto` | 위 표 참고 |
 | `detector` | 둘 다 | `zscore`, `growth` |
-| `threshold` | 탐지기별 기본값 | z-score `2.5`, 증가율 `1.0`. 명세 필수값은 z-score `2.0/2.5/3.0`, 증가율 `0.5/1.0/2.0` |
-| `k` | 3 | 기준선에 쓸 직전 연도 수 (2~10, `live` 전용) |
-| `min_count` | 3 | 증가율의 최소 건수 (`live` 전용) |
+| `threshold` | 탐지기별 기본값 | z-score `2.5`, 증가율 `1.0`. live에서 지정할 때 `detector` 필수 |
+| `k` | live에서 3 | 기준선 길이(2~10) 또는 저장된 실행 설정 필터 |
+| `min_count` | live에서 3 | 증가율의 최소 건수 또는 저장된 실행 설정 필터 |
 | `field` | — | 분야 코드 |
 | `domestic_id`, `foreign_id` | — | 기관 |
 | `year` | — | 연도 |
 | `scenario_id` | — | 주입 시나리오 (`file` 전용) |
+| `correction_id` | — | 보정 버전 (`file` 전용) |
 | `limit` | 100 | 최대 1000 |
 
 ### 응답
@@ -312,15 +320,11 @@ GET /api/institutions?role=domestic&q=기관
 
 ## 현재 한계
 
-- **실제 데이터(`data/sample/actual/ai_2025_sample`)로는 탐지가 0건입니다.**
-  2025년 한 해만 수집돼 있어 z-score 는 직전 k년이 없고(`insufficient_history` 1,896행)
-  증가율은 전년이 없습니다(`below_min_count` 1,580행). 코드 문제가 아니라 데이터 범위
-  문제이며, 2015~2025년 수집이 들어오면 풀립니다. 그때까지 동작 확인은 예시 데이터로 합니다.
-- 실제 데이터 폴더에 `detections.csv` 와 `injections.csv` 가 없어
-  `/api/scenarios` 는 빈 목록입니다. 주입 시나리오는 `python -m experiments.run` 의
-  출력(`results/run/`)을 데이터 폴더에 넣고 `source=file` 로 보면 됩니다.
+- 2025년 샘플의 실시간 탐지는 과거 기준선 부족으로 0건입니다.
+  여러 연도의 실시간 탐지는 [기간 집계](period-pilot.md)에서 확인할 수 있습니다.
+- 기간 집계의 주입 후보는 0쌍입니다. 저장된 시나리오가 있는 데이터 폴더에서는
+  `source=file`과 `scenario_id`로 조회합니다.
 - 기본 데이터가 `data/sample/example` 이라 실제 수집 결과가 아닙니다.
   `/api/meta` 의 `is_real_data` 가 `false` 입니다.
-- `institutions_foreign.csv` 는 아직 실제 집계 산출물에 **없습니다.** 히트맵의 국가별 집계와
-  협력 관계 뷰에 해외 기관 이름·국가가 필요하므로 형식만 먼저 제안했습니다.
-  이 파일이 없으면 해외 기관 이름 자리에 ID 가, 국가 자리에 `null` 이 들어갑니다.
+- 네 분야 샘플과 기간 집계에는 `institutions_foreign.csv`가 있습니다.
+  구형 데이터 폴더에서 이 파일이 없으면 API는 해외 기관 이름에 ID를, 국가에 `null`을 반환합니다.

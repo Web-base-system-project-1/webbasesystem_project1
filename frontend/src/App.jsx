@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getData } from './api/client'
+import { getData, getInstitutions } from './api/client'
 import InstitutionFilters from './components/InstitutionFilters'
 import TimelineChart from './components/TimelineChart'
 import TimelineSummary from './components/TimelineSummary'
@@ -38,11 +38,11 @@ function App() {
     Promise.all(
       [
         '/api/meta',
-        '/api/institutions?role=domestic&limit=1000',
-        '/api/institutions?role=foreign&limit=1000',
+        getInstitutions('domestic', controller.signal),
+        getInstitutions('foreign', controller.signal),
         '/api/pairs?limit=1',
         '/api/detections?source=live&limit=1000',
-      ].map((path) => getData(path, controller.signal)),
+      ].map((path) => typeof path === 'string' ? getData(path, controller.signal) : path),
     )
       .then(([meta, domestic, foreign, pairs, detections]) => {
         if (controller.signal.aborted) return

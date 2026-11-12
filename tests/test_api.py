@@ -245,3 +245,89 @@ def test_institution_search_restricts_partners_before_limit(client, dataset):
         'role': 'foreign', 'field': 'ai', 'domestic_id': 'EXAMPLE_KR_1', 'q': 'no-match',
     }).get_json()['total'] == 0
     assert client.get('/api/institutions?role=foreign').get_json()['total'] == 3
+
+
+PAIR_QUERY = {"domestic_id": "EXAMPLE_KR_1", "foreign_id": "EXAMPLE_FR_1", "field": "ai"}
+
+
+def test_institution_pages_keep_total_and_return_next_offset(client):
+    first = client.get("/api/institutions?role=foreign&limit=2").get_json()
+    assert (first["count"], first["total"], first["next_offset"]) == (2, 3, 2)
+    last = client.get("/api/institutions?role=foreign&limit=2&offset=2").get_json()
+    assert (last["count"], last["total"], last["next_offset"]) == (1, 3, None)
+    assert first["data_version"] == last["data_version"]
+    assert len({item["id"] for item in first["items"] + last["items"]}) == 3
+    assert client.get("/api/institutions?offset=-1").status_code == 400
+
+
+def test_named_scenario_uses_file_for_both_detection_and_timeline(client, dataset):
+    (dataset / "detections.csv").write_text(
+        "domestic_id,foreign_id,field,year,detector,threshold,score,scenario_id,k,min_count,correction_id\n"
+        "EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2021,zscore,2.5,4,step_x2,3,3,none\n"
+        "EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2022,zscore,2.5,5,step_x3,3,3,none\n",
+        encoding="utf-8",
+    )
+    (dataset / "injections.csv").write_text(
+        "domestic_id,foreign_id,field,year,scenario_id\n"
+        "EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2021,step_x2\n"
+        "EXAMPLE_KR_1,EXAMPLE_FR_1,ai,2022,step_x3\n",
+        encoding="utf-8",
+    )
+    query = {**PAIR_QUERY, "scenario_id": "step_x2", "detector": "zscore", "threshold": 2.5, "k": 3}
+    timeline = client.get("/api/timeline", query_string=query).get_json()
+    detection = client.get("/api/detections", query_string=query).get_json()
+    assert timeline["source"] == detection["source"] == "file"
+    assert [item["scenario_id"] for item in timeline["detections"]] == ["step_x2"]
+    assert [item["scenario_id"] for item in timeline["injections"]] == ["step_x2"]
+    assert [item["scenario_id"] for item in detection["items"]] == ["step_x2"]
+    live = client.get("/api/timeline", query_string={**query, "source": "live"})
+    assert live.status_code == 400
+
+
+def restrict_years(dataset, years):
+    for name in ("collab_counts.csv", "kr_totals.csv", "collab_shares.csv"):
+        path = dataset / name
+        with path.open(encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            columns = reader.fieldnames
+            rows = [row for row in reader if int(row["year"]) in years]
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(rows)
+
+
+def test_single_year_input_does_not_create_past_years(client, dataset):
+    restrict_years(dataset, {2025})
+    body = client.get("/api/detections?source=live").get_json()
+    assert body["summary"]["evaluated_rows"] == 36
+    timeline = client.get("/api/timeline", query_string=PAIR_QUERY).get_json()
+    assert [row["year"] for row in timeline["baseline"]] == [2025]
+
+
+def test_growth_does_not_bridge_an_unobserved_year(client, dataset):
+    restrict_years(dataset, {2019, 2021})
+    response = client.get(
+        "/api/detections?source=live&detector=growth&threshold=0.5&field=ai&year=2021"
+    ).get_json()
+    assert response["summary"] == {"evaluated_rows": 9, "skipped": {"insufficient_history": 9}}
+    assert response["items"] == []
+
+
+def test_live_timeline_validates_detector_and_keeps_zscore_threshold_separate(client):
+    invalid = client.get("/api/timeline", query_string={**PAIR_QUERY, "detector": "typo"})
+    assert invalid.status_code == 400
+    assert client.get("/api/detections?source=live&threshold=0.5").status_code == 400
+    baseline = client.get("/api/timeline", query_string={**PAIR_QUERY, "detector": "zscore"}).get_json()
+    growth = client.get("/api/timeline", query_string={
+        **PAIR_QUERY, "detector": "growth", "threshold": 0.5,
+    }).get_json()
+    assert growth["baseline"] == baseline["baseline"]
+
+
+def test_detector_cache_stays_bounded(client):
+    for threshold in range(1, 9):
+        assert client.get(
+            "/api/detections", query_string={"detector": "zscore", "threshold": threshold},
+        ).status_code == 200
+    assert len(data_store.get_store()._detector_cache) == data_store.DETECTOR_CACHE_SIZE
