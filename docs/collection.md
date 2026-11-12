@@ -36,7 +36,7 @@ OPENALEX_API_KEY=자신의_실제_API_키
 
 **실행 예시 토픽:** [T11636 — Artificial Intelligence in Healthcare and Education](https://api.openalex.org/topics/T11636). 2026-11-05 공개 API에서 ID·이름과 해당 조건의 논문 응답을 확인했습니다.
 
-이것은 AI의 한 하위 토픽에 대한 실행 예시입니다. 최종 4개 분야 토픽 선정과 선정 근거는 팀이 별도로 확정해 `config/field_definition.csv`에 기록합니다.
+이것은 AI의 한 하위 토픽에 대한 실행 예시입니다. 네 분야의 샘플 토픽과 선정 근거는 [분야 정의 초안](../config/field_definition.csv)에 있습니다. 2025년 샘플의 조회 조건과 집계 사용법은 [네 분야 집계 안내](../data/sample/actual/four_fields_2025_sample/README.md)에 기록했습니다.
 
 ## 3. 실행
 
