@@ -11,7 +11,7 @@ from tempfile import TemporaryDirectory
 from pipeline._files import PipelineError, fingerprint, project_path, read_json, source_name, utc_now, write_csv, write_json
 from pipeline.aggregate import CSV_COLUMNS, PAIR_KEYS, TOTAL_KEYS, aggregate_records
 from pipeline.collect_period import YEARS, read_shard, validate_definitions
-from pipeline.preprocess import AUDIT_COLUMNS, preprocess_records
+from pipeline.preprocess import AUDIT_COLUMNS, DOMESTIC_TYPES, preprocess_records
 
 BASELINE_YEARS = tuple(range(2015, 2021))
 MIN_DOMESTIC_WORKS = 5
@@ -40,7 +40,7 @@ def load_coverage(directory):
     return source
 
 
-def preprocess_period(directory, source):
+def preprocess_period(directory, source, *, include_healthcare=False):
     all_works, audit, coverage, seen = [], [], [], set()
     for shard in source["shards"]:
         field, topic_id, year = (shard[key] for key in ("field", "topic_id", "year"))
@@ -54,7 +54,10 @@ def preprocess_period(directory, source):
         if len(ids) != len(records) or ids & seen:
             raise PipelineError("토픽·연도별 원본에 같은 논문 ID가 있습니다. 수집 시점을 확인하세요.")
         seen.update(ids)
-        works, rows, _, _ = preprocess_records(records, topic_id=topic_id, year=year, field=field)
+        works, rows, _, _ = preprocess_records(
+            records, topic_id=topic_id, year=year, field=field,
+            include_healthcare=include_healthcare,
+        )
         all_works.extend(works)
         audit.extend({"field": field, "topic_id": topic_id, "year": year, **row} for row in rows)
         coverage.append({
@@ -126,9 +129,11 @@ def foreign_institutions(works):
     return [registry[key] for key in sorted(registry)]
 
 
-def aggregate_period(input_dir, output_dir):
+def aggregate_period(input_dir, output_dir, *, include_healthcare=False):
     source = load_coverage(input_dir)
-    preliminary, audit, coverage = preprocess_period(input_dir, source)
+    preliminary, audit, coverage = preprocess_period(
+        input_dir, source, include_healthcare=include_healthcare,
+    )
     works = filter_domestic_institutions(preliminary, audit)
     artifacts, summary, review = aggregate_records(works)
     series, baselines, candidates = build_series(artifacts)
@@ -146,6 +151,7 @@ def aggregate_period(input_dir, output_dir):
     }
 
     source_sha256 = fingerprint(input_dir / "manifest.json")
+    domestic_types = DOMESTIC_TYPES | ({"healthcare"} if include_healthcare else set())
     manifest = {
         "schema_version": 1, "status": "complete", "data_scope": "period_pilot", "is_real_data": True,
         "created_at": utc_now(), "years": {"min": YEARS[0], "max": YEARS[-1]},
@@ -162,7 +168,7 @@ def aggregate_period(input_dir, output_dir):
             "distinct_pair_fields": len(baselines), "timeline_rows": len(series),
         },
         "rules": {
-            "domestic_types": ["education", "facility", "government"],
+            "domestic_types": sorted(domestic_types),
             "min_domestic_period_works": MIN_DOMESTIC_WORKS, "max_unique_institutions_per_work": 50,
             "identity": "exact_openalex_id_no_ror_or_lineage_merging",
             "zero_years": "filled only after all configured topic and year queries are complete",
@@ -200,9 +206,13 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--include-healthcare", action="store_true", help="국내 병원도 포함해 비교 집계")
     args = parser.parse_args(argv)
     try:
-        result = aggregate_period(project_path(args.input_dir), project_path(args.output_dir))
+        result = aggregate_period(
+            project_path(args.input_dir), project_path(args.output_dir),
+            include_healthcare=args.include_healthcare,
+        )
     except (PipelineError, ValueError) as error:
         print(f"기간 집계 실패: {error}", file=sys.stderr)
         return 1

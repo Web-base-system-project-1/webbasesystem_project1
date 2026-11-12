@@ -43,8 +43,8 @@ cd ..
 
 `node_modules`와 `.venv`는 각자 생성하며 Git에 올리지 않습니다.
 `package-lock.json`이 바뀌면 `frontend/`에서 `npm ci`를 다시 실행합니다.
-예시 데이터 화면 확인에는 OpenAlex API 키가 필요 없습니다.
-기존 `.env`가 있다면 덮어쓰지 마세요. `DATA_DIR`을 지정했다면 해당 데이터로 실행됩니다.
+저장소의 데이터 v1 ZIP으로 화면을 실행할 때는 OpenAlex API 키가 필요 없습니다.
+기존 `.env`의 `DATA_DIR`에 다른 데이터 경로가 있으면 그 경로가 우선합니다. 기본 데이터 v1을 사용하려면 해당 값을 비우고 Flask를 다시 시작하세요.
 
 ## 3. 매번 실행 — 터미널 두 개
 
@@ -63,6 +63,7 @@ Windows PowerShell:
 ```
 
 `http://127.0.0.1:5001/api/health`에서 `{"status":"ok"}`를 확인합니다.
+`http://127.0.0.1:5001/api/meta`에서 데이터 버전과 2015~2025년 범위를 확인할 수 있습니다.
 
 ### 터미널 2: React 프론트엔드
 

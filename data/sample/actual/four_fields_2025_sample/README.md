@@ -11,7 +11,7 @@
 
 총 400편에서 115편을 유지했습니다. 네 분야의 고유 국내 기관은 67곳, 해외 기관은 259곳입니다. 같은 기관 쌍이 여러 분야에 등장하면 분야별로 한 행씩 계산해 총 423행입니다.
 
-토픽 선정 근거는 [분야 정의 초안](../../../../config/field_definition.csv)에 있습니다. 한 논문은 OpenAlex 대표 토픽과 일치하는 분야에만 배정합니다. 수집한 400편의 논문 ID는 모두 달랐습니다. [OpenAlex 토픽 문서](https://help.openalex.org/data/topics/)
+토픽 선정 근거는 [파일럿 분야 정의](../../../../config/field_definition_pilot.csv)에 있습니다. 한 논문은 OpenAlex 대표 토픽과 일치하는 분야에만 배정합니다. 수집한 400편의 논문 ID는 모두 달랐습니다. [OpenAlex 토픽 문서](https://help.openalex.org/data/topics/)
 
 기존 AI 샘플과 같은 토픽을 11월 11일에 다시 조회해 이번 AI 샘플을 만들었습니다. 기존 AI 샘플의 결과와 이번 결과는 각자의 수집 시각과 해시로 구분합니다.
 

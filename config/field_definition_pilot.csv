@@ -1,0 +1,5 @@
+field,topic_id,topic_name,rationale
+semiconductor,T10472,Semiconductor materials and devices,ALD 박막과 게이트 절연막 및 소자 계면 연구를 포함하는 반도체 샘플 토픽
+ai,T11636,Artificial Intelligence in Healthcare and Education,의료·교육의 AI 적용을 다루며 기존 AI 샘플과 같은 토픽으로 수집
+bio,T10878,CRISPR and Genetic Engineering,CRISPR 기반 유전자 편집과 유전공학을 다루는 바이오 샘플 토픽
+quantum,T10682,Quantum Computing Algorithms and Architecture,양자 알고리즘·오류 정정·계산 구조를 다루는 양자 샘플 토픽

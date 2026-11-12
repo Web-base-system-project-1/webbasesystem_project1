@@ -35,16 +35,16 @@ React는 상대 경로 `/api/...`를 사용합니다. 개발 중 Vite(5173)의 �
 
 ## 데이터 출처
 
-서버는 **켜질 때 한 번만** CSV 를 읽어 메모리에 들고 있습니다. 요청마다 파일을 다시
-읽지 않습니다. 읽는 폴더는 `.env` 의 `DATA_DIR` 로 바꿉니다.
+서버는 첫 데이터 요청에서 CSV를 한 번 읽고 메모리에서 재사용합니다.
+기본값은 [데이터 v1 ZIP](../data/sample/actual/four_fields_2015_2025_v1.zip)입니다.
+다른 집계 폴더나 같은 구조의 ZIP을 사용하려면 `.env`의 `DATA_DIR`을 지정합니다.
 
 ```dotenv
-DATA_DIR=data/processed/ai_2025_sample
+DATA_DIR=data/processed/four_fields_2015_2025_v1
 ```
 
-지정하지 않으면 Git 으로 공유하는 예시 폴더 `data/sample/example` 을 사용합니다.
-그 폴더는 `python scripts/make_example_data.py` 로 다시 만들 수 있습니다(시드 고정).
-지금 어떤 데이터를 보고 있는지는 `/api/meta` 의 `is_real_data` 로 확인합니다.
+지금 사용하는 데이터는 `/api/meta`의 `data_version`과 `is_real_data`로 확인합니다.
+화면 테스트에 쓰는 가상 데이터는 `DATA_DIR=data/sample/example`로 선택할 수 있습니다.
 
 폴더를 바꾸면 **서버를 다시 켜야** 반영됩니다.
 
@@ -64,16 +64,16 @@ DATA_DIR=data/processed/ai_2025_sample
 
 ```json
 {
-  "data_version": "example-2026-11-08",
-  "data_scope": "example",
-  "is_real_data": false,
-  "data_dir": "example",
-  "fields": ["ai", "bio"],
+  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "data_scope": "period_pilot",
+  "is_real_data": true,
+  "data_dir": "four_fields_2015_2025_v1",
+  "fields": ["ai", "bio", "quantum", "semiconductor"],
   "years": { "min": 2015, "max": 2025 },
   "detectors": ["growth", "zscore"],
   "counts": {
-    "rows": 198, "domestic_institutions": 3, "foreign_institutions": 3,
-    "pairs": 18, "detections": 75, "injections": 5
+    "rows": 80564, "domestic_institutions": 78, "foreign_institutions": 2660,
+    "pairs": 7324, "detections": 19790, "injections": 420
   }
 }
 ```
@@ -314,10 +314,7 @@ GET /api/institutions?role=domestic&q=기관
 ## 현재 한계
 
 - 2025년 샘플의 실시간 탐지는 과거 기준선 부족으로 0건입니다.
-  여러 연도의 실시간 탐지는 [기간 집계](period-pilot.md)에서 확인할 수 있습니다.
-- 기간 집계의 주입 후보는 0쌍입니다. 저장된 시나리오가 있는 데이터 폴더에서는
-  `source=file`과 `scenario_id`로 조회합니다.
-- 기본 데이터가 `data/sample/example` 이라 실제 수집 결과가 아닙니다.
-  `/api/meta` 의 `is_real_data` 가 `false` 입니다.
+  여러 연도의 실시간 탐지는 [데이터 v1](period-v1.md)에서 확인할 수 있습니다.
+- 데이터 v1의 저장된 시나리오는 `source=file`과 `scenario_id`로 조회합니다.
 - 네 분야 샘플과 기간 집계에는 `institutions_foreign.csv`가 있습니다.
   구형 데이터 폴더에서 이 파일이 없으면 API는 해외 기관 이름에 ID를, 국가에 `null`을 반환합니다.

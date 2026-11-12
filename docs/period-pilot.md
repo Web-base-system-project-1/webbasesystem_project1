@@ -42,10 +42,10 @@ DATA_DIR=data/processed/four_fields_2015_2025_20261111
 
 ## 다시 수집하고 집계하는 방법
 
-가상환경을 활성화한 뒤 프로젝트 최상위에서 실행합니다. config/field_definition.csv를 읽어 토픽·연도별로 커서를 끝까지 조회합니다. 다른 토픽 초안은 --definitions로 지정할 수 있습니다. [OpenAlex 커서 페이지 방식](https://help.openalex.org/api/paging/)
+가상환경을 활성화한 뒤 프로젝트 최상위에서 실행합니다. 파일럿의 네 토픽은 [파일럿 분야 정의](../config/field_definition_pilot.csv)를 명시해 다시 수집할 수 있습니다. [OpenAlex 커서 페이지 방식](https://help.openalex.org/api/paging/)
 
 ~~~bash
-python -m pipeline.collect_period --output-dir data/raw/four_fields_2015_2025_20261111
+python -m pipeline.collect_period --definitions config/field_definition_pilot.csv --output-dir data/raw/four_fields_2015_2025_20261111
 python -m pipeline.aggregate_period --input-dir data/raw/four_fields_2015_2025_20261111 --output-dir data/processed/four_fields_2015_2025_20261111
 ~~~
 
