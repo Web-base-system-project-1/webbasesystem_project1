@@ -71,7 +71,7 @@ export default function DetectionList({ detections, pair }) {
         <div className="table-scroll">
           <table>
             <caption className="sr-only">
-              선택한 기관 쌍의 저장된 탐지 결과
+              선택한 기관 쌍의 탐지 결과
             </caption>
             <thead>
               <tr>
@@ -93,7 +93,7 @@ export default function DetectionList({ detections, pair }) {
                   <td>{format(row.score, row.detector)}</td>
                   <td>{format(row.threshold, row.detector)}</td>
                   <td>{row.collab_count ?? '—'}</td>
-                  <td>{row.scenario_id}</td>
+                  <td>{row.scenario_id ?? '원본'}</td>
                 </tr>
               ))}
             </tbody>

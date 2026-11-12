@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { getData } from '../src/api/client.js'
+import { getData, getInstitutions } from '../src/api/client.js'
 
 const originalFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = originalFetch })
@@ -61,4 +61,38 @@ test('preserves network failures for the caller to handle', async () => {
   const error = new TypeError('network unavailable')
   globalThis.fetch = async () => { throw error }
   await assert.rejects(getData('/api/meta'), (actual) => actual === error)
+})
+
+
+test('loads both pages of a large institution catalog', async () => {
+  const first = Array.from({ length: 1000 }, (_, id) => ({ id: String(id) }))
+  const last = [{ id: '1000' }]
+  const controller = new AbortController()
+  const offsets = []
+  globalThis.fetch = async (path, { signal }) => {
+    assert.equal(signal, controller.signal)
+    const offset = new URL(path, 'http://localhost').searchParams.get('offset')
+    offsets.push(offset)
+    return Response.json({
+      data_version: 'period', total: 1001, offset: Number(offset),
+      items: offset == null ? first : last,
+      next_offset: offset == null ? 1000 : null,
+    })
+  }
+  const result = await getInstitutions('foreign', controller.signal)
+  assert.deepEqual(offsets, [null, '1000'])
+  assert.equal(result.count, 1001)
+  assert.deepEqual(result.items.at(-1), last[0])
+})
+
+test('rejects institution pages from different data versions', async () => {
+  globalThis.fetch = async (path) => {
+    const offset = new URL(path, 'http://localhost').searchParams.get('offset')
+    return Response.json({
+      data_version: offset == null ? 'before' : 'after',
+      total: 2, offset: Number(offset), items: [{ id: offset || '0' }],
+      next_offset: offset == null ? 1 : null,
+    })
+  }
+  await assert.rejects(getInstitutions('foreign'), /데이터가 갱신/)
 })
