@@ -8,7 +8,7 @@ const format = (value, detector) =>
       ? `${(value * 100).toFixed(1)}%`
       : value.toFixed(2)
 
-export default function DetectionList({ detections, pair }) {
+export default function DetectionList({ detections, onSelect }) {
   const [detector, setDetector] = useState('all')
   const [order, setOrder] = useState('year')
   const rows = detections
@@ -30,10 +30,7 @@ export default function DetectionList({ detections, pair }) {
           <h2>
             탐지 결과 <span className="unit">{rows.length}건</span>
           </h2>
-          <p>
-            {pair.domestic_name} / {pair.foreign_name} ·{' '}
-            {pair.field.toUpperCase()}
-          </p>
+          <p>기관 쌍을 선택하면 해당 타임라인과 탐지 연도로 이동합니다.</p>
         </div>
       </div>
       <div className="detection-filters">
@@ -75,7 +72,7 @@ export default function DetectionList({ detections, pair }) {
             </caption>
             <thead>
               <tr>
-                <th scope="col">연도</th>
+                <th scope="col">연도</th><th scope="col">기관 쌍 · 분야</th>
                 <th scope="col">탐지 방법</th>
                 <th scope="col">점수</th>
                 <th scope="col">임계값</th>
@@ -89,6 +86,7 @@ export default function DetectionList({ detections, pair }) {
                   key={`${row.run_id}-${row.scenario_id}-${row.year}-${row.detector}-${row.threshold}-${row.correction_id}-${index}`}
                 >
                   <th scope="row">{row.year}</th>
+                  <td><button className="pair-link" onClick={() => onSelect(row)}>{row.domestic_name || row.domestic_id} / {row.foreign_name || row.foreign_id} · {row.field}</button></td>
                   <td>{labels[row.detector] || row.detector}</td>
                   <td>{format(row.score, row.detector)}</td>
                   <td>{format(row.threshold, row.detector)}</td>

@@ -1,6 +1,6 @@
 const number = new Intl.NumberFormat('ko-KR')
 
-export default function TimelineChart({ points }) {
+export default function TimelineChart({ points, selectedYear }) {
   const width = 960,
     height = 310
   const left = 48,
@@ -57,8 +57,8 @@ export default function TimelineChart({ points }) {
             <circle
               cx={x(i)}
               cy={y(p.collab_count)}
-              r="4"
-              className="series-dot"
+              r={p.year === selectedYear ? 7 : 4}
+              className={p.year === selectedYear ? "series-dot selected-dot" : "series-dot"}
             >
               <title>
                 {p.year}년: {number.format(p.collab_count)}편

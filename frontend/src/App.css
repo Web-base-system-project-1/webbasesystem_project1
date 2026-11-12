@@ -51,3 +51,6 @@ footer { margin-top: 24px; color: #7b8377; font-size: 12px; line-height: 1.7; }
 .detection-filters { display: flex; gap: 16px; margin: 20px 0 12px; flex-wrap: wrap; }
 .detection-filters label { min-width: 160px; }
 .detection-note { font-size: 12px; color: #687264; line-height: 1.8; }
+
+.pair-link { border: 0; background: none; color: #365b43; text-decoration: underline; text-align: left; max-width: 360px; white-space: normal; line-height: 1.6; }
+.selected-dot { fill: #bb6836; stroke: #bb6836; }

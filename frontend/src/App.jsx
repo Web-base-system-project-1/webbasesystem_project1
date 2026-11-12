@@ -15,6 +15,7 @@ function App() {
     field: '',
   })
   const [timelineResult, setTimelineResult] = useState(null)
+  const [selectedYear, setSelectedYear] = useState(null)
   const [retry, setRetry] = useState(0)
   const catalog = catalogResult?.retry === retry ? catalogResult.catalog : null
   const catalogError =
@@ -39,12 +40,13 @@ function App() {
         '/api/institutions?role=domestic&limit=1000',
         '/api/institutions?role=foreign&limit=1000',
         '/api/pairs?limit=1',
+        '/api/detections?limit=1000',
       ].map((path) => getData(path, controller.signal)),
     )
-      .then(([meta, domestic, foreign, pairs]) => {
+      .then(([meta, domestic, foreign, pairs, detections]) => {
         if (controller.signal.aborted) return
         if (
-          [domestic, foreign, pairs].some(
+          [domestic, foreign, pairs, detections].some(
             (data) => data.data_version !== meta.data_version,
           )
         )
@@ -56,7 +58,7 @@ function App() {
         const first = pairs.items[0]
         setCatalogResult({
           retry,
-          catalog: { meta, domestic: domestic.items, foreign: foreign.items },
+          catalog: { meta, domestic: domestic.items, foreign: foreign.items, detections },
         })
         setSelection({
           domestic_id: first?.domestic_id || domestic.items[0]?.id || '',
@@ -105,11 +107,18 @@ function App() {
   }, [catalog, selection])
 
   const points = timeline?.points || []
-  const change = (event) =>
+  const change = (event) => {
+    setSelectedYear(null)
     setSelection((previous) => ({
       ...previous,
       [event.target.name]: event.target.value,
     }))
+  }
+  const selectDetection = (row) => {
+    setSelection({ domestic_id: row.domestic_id, foreign_id: row.foreign_id, field: row.field })
+    setSelectedYear(row.year)
+    document.getElementById('timeline')?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
     <main>
@@ -135,7 +144,7 @@ function App() {
         onChange={change}
       />
 
-      <section className="results" aria-label="조회 결과" aria-busy={loading}>
+      <section id="timeline" className="results" aria-label="조회 결과" aria-busy={loading}>
         {loading ? (
           <div className="state" role="status">
             데이터를 불러오는 중입니다.
@@ -167,17 +176,20 @@ function App() {
               </div>
               <TimelineSummary points={points} />
               <div className="chart-scroll">
-                <TimelineChart points={points} />
+                <TimelineChart points={points} selectedYear={selectedYear} />
               </div>
               <YearlyTable points={points} />
-              <DetectionList
-                detections={timeline.detections || []}
-                pair={timeline.pair}
-              />
+              {selectedYear && <p role="status">선택한 탐지 연도: {selectedYear}년</p>}
+
             </>
           )
         )}
       </section>
+      {catalog && <>
+        {catalog.meta.is_real_data && <p className="detection-note">실제 수집 샘플입니다. 한 해 자료만 있으면 전년 대비·과거 기준선 탐지를 검증할 수 없습니다. 탐지 결과가 없다는 것이 이상 징후가 없다는 뜻은 아닙니다.</p>}
+        <DetectionList detections={catalog.detections.items} onSelect={selectDetection} />
+        {catalog.detections.count < catalog.detections.total && <p>전체 {catalog.detections.total}건 중 {catalog.detections.count}건 표시</p>}
+      </>}
       <footer>
         {catalog?.meta.is_real_data === false
           ? '화면 확인을 위한 예시 데이터입니다. 실제 연구 실적과 다릅니다.'
