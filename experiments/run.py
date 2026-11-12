@@ -13,6 +13,10 @@ import pandas as pd
 from detectors import DETECTORS, build_panel
 from experiments.evaluate import evaluate
 from experiments.inject import build_scenarios, write_injections
+from experiments.correct import (
+    require_min_international_total,
+    require_share_increase,
+)
 
 THRESHOLDS = {"zscore": (2.0, 2.5, 3.0), "growth": (0.5, 1.0, 2.0)}  # 명세의 필수 임계값
 YEARS = list(range(2015, 2025 + 1))
@@ -29,20 +33,58 @@ def synthetic_inputs(n_domestic=5, partners=5, seed=0):
     return pd.DataFrame(counts), pd.DataFrame(totals)
 
 
-def run_all(scenarios, k=3, min_count=3, correction_id="none"):
-    """detections(탐지된 행만)와 runs(실행 목록)를 돌려준다. 보정 ID는 호출하는 쪽이 정한다."""
+def run_all(
+    scenarios,
+    k=3,
+    min_count=3,
+    correction_id="none",
+    *,
+    include_corrections=False,
+):
+    """시나리오별 탐지 결과와 실행 목록을 반환한다."""
     hits, runs = [], []
+
     for scenario_id, scenario in scenarios.items():
         for name, thresholds in THRESHOLDS.items():
             for threshold in thresholds:
-                run_id = f"{name}|th={threshold}|k={k}|min={min_count}|corr={correction_id}"
-                result = DETECTORS[name](scenario.panel, dict(k=k, threshold=threshold, min_count=min_count))
-                hits.append(result[result["detected"]].assign(
-                    scenario_id=scenario_id, run_id=run_id, correction_id=correction_id))
-                runs.append(dict(scenario_id=scenario_id, run_id=run_id, detector=name, threshold=threshold,
-                                 k=k, min_count=min_count, correction_id=correction_id))
-    return pd.concat(hits, ignore_index=True), pd.DataFrame(runs)
+                params = dict(k=k, threshold=threshold, min_count=min_count)
+                result = DETECTORS[name](scenario.panel, params)
 
+                versions = [(correction_id, result)]
+
+                if include_corrections:
+                    if name == "zscore":
+                        versions.append((
+                            "min_international_total_3",
+                            require_min_international_total(result),
+                        ))
+                    elif name == "growth":
+                        versions.append((
+                            "require_share_increase",
+                            require_share_increase(result, scenario.panel),
+                        ))
+
+                for version_id, output in versions:
+                    run_id = (
+                        f"{name}|th={threshold}|k={k}"
+                        f"|min={min_count}|corr={version_id}"
+                    )
+                    hits.append(output[output["detected"]].assign(
+                        scenario_id=scenario_id,
+                        run_id=run_id,
+                        correction_id=version_id,
+                    ))
+                    runs.append(dict(
+                        scenario_id=scenario_id,
+                        run_id=run_id,
+                        detector=name,
+                        threshold=threshold,
+                        k=k,
+                        min_count=min_count,
+                        correction_id=version_id,
+                    ))
+
+    return pd.concat(hits, ignore_index=True), pd.DataFrame(runs)
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="주입 → 탐지 → 평가를 한 번에 실행합니다.")
@@ -63,7 +105,7 @@ def main(argv=None):
     scenarios = build_scenarios(build_panel(counts, totals), seed=args.seed)
     args.out_dir.mkdir(parents=True, exist_ok=True)  # shortcut: 같은 폴더에 다시 실행하면 덮어쓴다, 버전 관리가 필요하면 폴더 이름을 바꿔 실행
     injections = write_injections(scenarios, args.out_dir / "injections.csv")
-    detections, runs = run_all(scenarios)
+    detections, runs = run_all(scenarios, include_corrections=True)
     decoys = pd.concat([s.decoy_targets for s in scenarios.values() if len(s.decoy_targets)], ignore_index=True)
     metrics = evaluate(injections, detections, runs, decoys)
     detections.to_csv(args.out_dir / "detections.csv", index=False, encoding="utf-8")
