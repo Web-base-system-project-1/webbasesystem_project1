@@ -6,9 +6,12 @@
 
 import math
 
+import pandas as pd
 from flask import Blueprint, jsonify, request
 
-from web.data_store import DataError, get_store
+from web.data_store import (
+    DEFAULT_K, DEFAULT_MIN_COUNT, DEFAULT_THRESHOLDS, DataError, get_store,
+)
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -89,6 +92,16 @@ def arg_required(name):
     return value
 
 
+def arg_detector():
+    detector = request.args.get("detector") or None
+    if detector and detector not in DEFAULT_THRESHOLDS:
+        raise ApiError(
+            "invalid_parameter",
+            f"detector 는 {' 또는 '.join(sorted(DEFAULT_THRESHOLDS))} 여야 합니다.",
+        )
+    return detector
+
+
 def envelope(store, **payload):
     return jsonify({"data_version": store.data_version, **payload})
 
@@ -113,9 +126,15 @@ def institutions():
     if role not in ("domestic", "foreign"):
         raise ApiError("invalid_parameter", "role 은 domestic 또는 foreign 이어야 합니다.")
     limit = arg_int("limit", default=200, minimum=1, maximum=MAX_LIMIT)
+    offset = arg_int("offset", default=0, minimum=0)
     frame = store.institutions(role=role, query=request.args.get("q"), type_=request.args.get("type"))
     total = len(frame)
-    return envelope(store, role=role, total=total, count=min(total, limit), items=records(frame.head(limit)))
+    items = records(frame.iloc[offset:offset + limit])
+    end = offset + len(items)
+    return envelope(
+        store, role=role, total=total, count=len(items), offset=offset,
+        next_offset=end if end < total else None, items=items,
+    )
 
 
 # ------------------------------------------------------------------- 기관 쌍
@@ -160,16 +179,37 @@ def timeline():
             status=404,
         )
 
-    detector = request.args.get("detector")
+    detector = arg_detector()
     threshold = arg_float("threshold")
-    found = store.detections_for(
-        domestic_id=domestic_id, foreign_id=foreign_id, field=field,
-        detector=detector, threshold=threshold,
-    )
-    injected = store.injections_for(domestic_id=domestic_id, foreign_id=foreign_id, field=field)
+    pair_filter = {"domestic_id": domestic_id, "foreign_id": foreign_id, "field": field}
+
+    source = _pick_source(store)
+    baseline, injected = [], []
+    if source == "live":
+        k = arg_int("k", default=DEFAULT_K, minimum=2, maximum=10)
+        min_count = arg_int("min_count", default=DEFAULT_MIN_COUNT, minimum=0)
+        found, _, _ = _live_detections(
+            store, detector, k=k, threshold=threshold, min_count=min_count, filters=pair_filter,
+        )
+        # 기준선 띠는 z-score 결과에서만 나온다. 연도마다 한 행씩.
+        zframe = _filter_rows(store.run_detector(
+            "zscore", k=k, threshold=threshold if detector == "zscore" else None,
+            min_count=min_count,
+        ), **pair_filter)
+        baseline = records(zframe[[
+            "year", "baseline_value", "baseline_std", "baseline_n",
+            "current_value", "score", "detected", "skip_reason",
+        ]].sort_values("year"))
+    else:
+        found = _file_detections(store, detector, threshold, pair_filter)
+        injected = records(store.injections_for(
+            **pair_filter, scenario_id=request.args.get("scenario_id") or None,
+        ))
 
     return envelope(
         store,
+        source=source,
+        baseline=baseline,
         pair={
             "domestic_id": domestic_id,
             "domestic_name": store.domestic_name(domestic_id),
@@ -182,32 +222,13 @@ def timeline():
             "year", "collab_count", "international_total", "share",
         ]]),
         detections=records(found) if len(found) else [],
-        injections=records(injected) if len(injected) else [],
+        injections=injected,
     )
 
 
 # --------------------------------------------------------------------- 탐지
 
-@api_bp.get("/detections")
-def detections():
-    """탐지 목록과 근거. 점수가 높은 순.
-
-    2번 담당자의 탐지 함수가 완성되기 전까지는 저장된 예시 결과를 그대로 돌려준다.
-    응답 형식은 바뀌지 않으므로 화면 쪽 코드는 그대로 쓸 수 있다.
-    """
-    store = get_store()
-    limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
-    frame = store.detections_for(
-        detector=request.args.get("detector"),
-        field=request.args.get("field"),
-        scenario_id=request.args.get("scenario_id"),
-        domestic_id=request.args.get("domestic_id"),
-        threshold=arg_float("threshold"),
-        year=arg_int("year"),
-    )
-    total = len(frame)
-    if total and "score" in frame.columns:
-        frame = frame.sort_values("score", ascending=False)
+def _with_names(store, frame, limit):
     items = []
     for row in records(frame.head(limit)):
         items.append({
@@ -216,7 +237,102 @@ def detections():
             "foreign_name": store.foreign_name(row.get("foreign_id")),
             "foreign_country": store.foreign_country(row.get("foreign_id")),
         })
-    return envelope(store, total=total, count=len(items), items=items)
+    return items
+
+
+def _filter_rows(frame, **filters):
+    for column, value in filters.items():
+        if value is None:
+            continue
+        if column not in frame.columns:
+            return frame.iloc[:0]
+        frame = frame[frame[column] == value]
+    return frame
+
+
+def _pick_source(store):
+    """자동 모드는 실험 조건을 지정하면 저장된 결과를 선택한다."""
+    source = request.args.get("source", "auto")
+    if source not in ("auto", "live", "file"):
+        raise ApiError("invalid_parameter", "source 는 auto, live, file 중 하나여야 합니다.")
+    file_filter = any(request.args.get(name) for name in ("scenario_id", "correction_id"))
+    if source == "auto":
+        return "live" if store.can_detect and not file_filter else "file"
+    if source == "live" and file_filter:
+        raise ApiError("invalid_parameter", "시나리오·보정 조건은 source=file에서 조회하세요.")
+    if source == "live" and not store.can_detect:
+        raise ApiError(
+            "detection_unavailable",
+            "이 데이터 폴더에는 collab_counts.csv 와 kr_totals.csv 가 없어 탐지를 실행할 수 없습니다.",
+            status=409,
+        )
+    return source
+
+
+def _file_detections(store, detector, threshold, filters):
+    return _filter_rows(
+        store.detections, detector=detector, threshold=threshold,
+        scenario_id=request.args.get("scenario_id") or None,
+        correction_id=request.args.get("correction_id") or None,
+        k=arg_int("k"), min_count=arg_int("min_count"), **filters,
+    )
+
+
+def _live_detections(store, detector, k, threshold, min_count, filters):
+    """2번 담당자의 탐지 함수를 직접 호출한다. 탐지된 행과 건너뛴 이유를 함께 돌려준다."""
+    if threshold is not None and detector is None:
+        raise ApiError("invalid_parameter", "실시간 임계값을 지정할 때는 detector도 지정하세요.")
+    names = [detector] if detector else sorted(DEFAULT_THRESHOLDS)
+    results, skipped, evaluated = [], {}, 0
+    used = []
+    for name in names:
+        value = threshold if threshold is not None else DEFAULT_THRESHOLDS[name]
+        frame = _filter_rows(store.run_detector(name, k=k, threshold=value, min_count=min_count), **filters)
+        evaluated += len(frame)
+        for reason, count in frame["skip_reason"].dropna().value_counts().items():
+            skipped[reason] = skipped.get(reason, 0) + int(count)
+        results.append(frame[frame["detected"]])
+        used.append({"detector": name, "threshold": value, "k": k, "min_count": min_count})
+    found = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+    return found, {"evaluated_rows": evaluated, "skipped": skipped}, used
+
+
+@api_bp.get("/detections")
+def detections():
+    """탐지 목록과 근거. 점수가 높은 순.
+
+    collab_counts.csv 와 kr_totals.csv 가 있으면 2번 담당자의 탐지 함수를 그대로
+    호출해 계산한다(source=live). 없으면 저장된 detections.csv 를 읽는다(source=file).
+    어느 쪽이든 응답 모양은 같다.
+    """
+    store = get_store()
+    limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
+    detector = arg_detector()
+    filters = {
+        "field": request.args.get("field"),
+        "domestic_id": request.args.get("domestic_id"),
+        "foreign_id": request.args.get("foreign_id"),
+        "year": arg_int("year"),
+    }
+
+    if _pick_source(store) == "live":
+        found, summary, used = _live_detections(
+            store, detector,
+            k=arg_int("k", default=DEFAULT_K, minimum=2, maximum=10),
+            threshold=arg_float("threshold"),
+            min_count=arg_int("min_count", default=DEFAULT_MIN_COUNT, minimum=0),
+            filters=filters,
+        )
+        source, params = "live", used
+    else:
+        found = _file_detections(store, detector, arg_float("threshold"), filters)
+        source, params, summary = "file", [], {"evaluated_rows": len(found), "skipped": {}}
+
+    total = len(found)
+    if total and "score" in found.columns:
+        found = found.sort_values("score", ascending=False)
+    return envelope(store, source=source, params=params, summary=summary,
+                    total=total, count=min(total, limit), items=_with_names(store, found, limit))
 
 
 # -------------------------------------------------------------------- 시나리오

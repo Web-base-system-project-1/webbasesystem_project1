@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getData } from './api/client'
+import { getData, getInstitutions } from './api/client'
 import InstitutionFilters from './components/InstitutionFilters'
 import TimelineChart from './components/TimelineChart'
 import TimelineSummary from './components/TimelineSummary'
@@ -33,14 +33,12 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all(
-      [
-        '/api/meta',
-        '/api/institutions?role=domestic&limit=1000',
-        '/api/institutions?role=foreign&limit=1000',
-        '/api/pairs?limit=1',
-      ].map((path) => getData(path, controller.signal)),
-    )
+    Promise.all([
+      getData('/api/meta', controller.signal),
+      getInstitutions('domestic', controller.signal),
+      getInstitutions('foreign', controller.signal),
+      getData('/api/pairs?limit=1', controller.signal),
+    ])
       .then(([meta, domestic, foreign, pairs]) => {
         if (controller.signal.aborted) return
         if (
