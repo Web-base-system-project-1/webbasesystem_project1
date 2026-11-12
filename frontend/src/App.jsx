@@ -24,7 +24,8 @@ function App() {
     catalog && Object.values(selection).some((value) => !value)
   // 선택·데이터 버전이 바뀐 렌더부터 이전 결과를 숨깁니다.
   const result =
-    timelineResult?.catalog === catalog && timelineResult?.selection === selection
+    timelineResult?.catalog === catalog &&
+    timelineResult?.selection === selection
       ? timelineResult
       : null
   const timeline = result?.data
@@ -40,7 +41,7 @@ function App() {
         '/api/institutions?role=domestic&limit=1000',
         '/api/institutions?role=foreign&limit=1000',
         '/api/pairs?limit=1',
-        '/api/detections?limit=1000',
+        '/api/detections?source=live&limit=1000',
       ].map((path) => getData(path, controller.signal)),
     )
       .then(([meta, domestic, foreign, pairs, detections]) => {
@@ -51,14 +52,15 @@ function App() {
           )
         )
           throw new Error('데이터가 갱신되었습니다. 다시 불러와 주세요.')
-        if (domestic.count < domestic.total || foreign.count < foreign.total)
-          throw new Error(
-            '기관 목록을 모두 불러올 수 없습니다. 검색 API 연결이 필요합니다.',
-          )
         const first = pairs.items[0]
         setCatalogResult({
           retry,
-          catalog: { meta, domestic: domestic.items, foreign: foreign.items, detections },
+          catalog: {
+            meta,
+            domestic: domestic.items,
+            foreign: foreign.items,
+            detections,
+          },
         })
         setSelection({
           domestic_id: first?.domestic_id || domestic.items[0]?.id || '',
@@ -77,7 +79,7 @@ function App() {
     if (!catalog || Object.values(selection).some((value) => !value)) return
     const controller = new AbortController()
     getData(
-      `/api/timeline?${new URLSearchParams(selection)}`,
+      `/api/timeline?${new URLSearchParams({ ...selection, source: 'live' })}`,
       controller.signal,
     )
       .then((data) => {
@@ -108,14 +110,22 @@ function App() {
 
   const points = timeline?.points || []
   const change = (event) => {
+    const { name, value } = event.target
     setSelectedYear(null)
     setSelection((previous) => ({
       ...previous,
-      [event.target.name]: event.target.value,
+      ...(name === 'field'
+        ? { domestic_id: '', foreign_id: '' }
+        : {}),
+      [name]: value,
     }))
   }
   const selectDetection = (row) => {
-    setSelection({ domestic_id: row.domestic_id, foreign_id: row.foreign_id, field: row.field })
+    setSelection({
+      domestic_id: row.domestic_id,
+      foreign_id: row.foreign_id,
+      field: row.field,
+    })
     setSelectedYear(row.year)
     document.getElementById('timeline')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -141,10 +151,16 @@ function App() {
       <InstitutionFilters
         catalog={catalog}
         selection={selection}
+        pair={timeline?.pair}
         onChange={change}
       />
 
-      <section id="timeline" className="results" aria-label="조회 결과" aria-busy={loading}>
+      <section
+        id="timeline"
+        className="results"
+        aria-label="조회 결과"
+        aria-busy={loading}
+      >
         {loading ? (
           <div className="state" role="status">
             데이터를 불러오는 중입니다.
@@ -158,7 +174,9 @@ function App() {
           </div>
         ) : empty || noSelection ? (
           <div className="state" role="status">
-            선택한 조건의 데이터가 없습니다. 다른 기관이나 분야를 선택해 주세요.
+            {noSelection
+              ? '국내 기관과 해외 기관을 선택해 주세요. 어느 쪽부터 선택해도 됩니다.'
+              : '선택한 조건의 데이터가 없습니다. 다른 기관이나 분야를 선택해 주세요.'}
           </div>
         ) : (
           timeline && (
@@ -179,17 +197,33 @@ function App() {
                 <TimelineChart points={points} selectedYear={selectedYear} />
               </div>
               <YearlyTable points={points} />
-              {selectedYear && <p role="status">선택한 탐지 연도: {selectedYear}년</p>}
-
+              {selectedYear && (
+                <p role="status">선택한 탐지 연도: {selectedYear}년</p>
+              )}
             </>
           )
         )}
       </section>
-      {catalog && <>
-        {catalog.meta.is_real_data && <p className="detection-note">실제 수집 샘플입니다. 한 해 자료만 있으면 전년 대비·과거 기준선 탐지를 검증할 수 없습니다. 탐지 결과가 없다는 것이 이상 징후가 없다는 뜻은 아닙니다.</p>}
-        <DetectionList detections={catalog.detections.items} onSelect={selectDetection} />
-        {catalog.detections.count < catalog.detections.total && <p>전체 {catalog.detections.total}건 중 {catalog.detections.count}건 표시</p>}
-      </>}
+      {catalog && (
+        <>
+          {catalog.meta.is_real_data && (
+            <p className="detection-note">
+              각 분야 하위 토픽의 실제 수집 검증 데이터입니다. 전체 분야를
+              대표하지 않으며, 원본 탐지는 이상 여부가 확정된 판정이 아닙니다.
+            </p>
+          )}
+          <DetectionList
+            detections={catalog.detections.items}
+            onSelect={selectDetection}
+          />
+          {catalog.detections.count < catalog.detections.total && (
+            <p>
+              전체 {catalog.detections.total}건 중 {catalog.detections.count}건
+              표시
+            </p>
+          )}
+        </>
+      )}
       <footer>
         {catalog?.meta.is_real_data === false
           ? '화면 확인을 위한 예시 데이터입니다. 실제 연구 실적과 다릅니다.'

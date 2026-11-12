@@ -116,7 +116,11 @@ def institutions():
     if role not in ("domestic", "foreign"):
         raise ApiError("invalid_parameter", "role 은 domestic 또는 foreign 이어야 합니다.")
     limit = arg_int("limit", default=200, minimum=1, maximum=MAX_LIMIT)
-    frame = store.institutions(role=role, query=request.args.get("q"), type_=request.args.get("type"))
+    frame = store.institutions(
+        role=role, query=request.args.get("q"), type_=request.args.get("type"),
+        field=request.args.get("field"), domestic_id=request.args.get("domestic_id"),
+        foreign_id=request.args.get("foreign_id"),
+    )
     total = len(frame)
     return envelope(store, role=role, total=total, count=min(total, limit), items=records(frame.head(limit)))
 

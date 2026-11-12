@@ -67,12 +67,11 @@ export default function DetectionList({ detections, onSelect }) {
       ) : (
         <div className="table-scroll">
           <table>
-            <caption className="sr-only">
-              선택한 기관 쌍의 저장된 탐지 결과
-            </caption>
+            <caption className="sr-only">전체 기관 쌍의 탐지 결과</caption>
             <thead>
               <tr>
-                <th scope="col">연도</th><th scope="col">기관 쌍 · 분야</th>
+                <th scope="col">연도</th>
+                <th scope="col">기관 쌍 · 분야</th>
                 <th scope="col">탐지 방법</th>
                 <th scope="col">점수</th>
                 <th scope="col">임계값</th>
@@ -83,15 +82,20 @@ export default function DetectionList({ detections, onSelect }) {
             <tbody>
               {rows.map((row, index) => (
                 <tr
-                  key={`${row.run_id}-${row.scenario_id}-${row.year}-${row.detector}-${row.threshold}-${row.correction_id}-${index}`}
+                  key={`${row.run_id}-${row.scenario_id || '원본 실시간 계산'}-${row.year}-${row.detector}-${row.threshold}-${row.correction_id}-${index}`}
                 >
                   <th scope="row">{row.year}</th>
-                  <td><button className="pair-link" onClick={() => onSelect(row)}>{row.domestic_name || row.domestic_id} / {row.foreign_name || row.foreign_id} · {row.field}</button></td>
+                  <td>
+                    <button className="pair-link" onClick={() => onSelect(row)}>
+                      {row.domestic_name || row.domestic_id} /{' '}
+                      {row.foreign_name || row.foreign_id} · {row.field}
+                    </button>
+                  </td>
                   <td>{labels[row.detector] || row.detector}</td>
                   <td>{format(row.score, row.detector)}</td>
                   <td>{format(row.threshold, row.detector)}</td>
                   <td>{row.collab_count ?? '—'}</td>
-                  <td>{row.scenario_id}</td>
+                  <td>{row.scenario_id || '원본 실시간 계산'}</td>
                 </tr>
               ))}
             </tbody>

@@ -111,6 +111,13 @@ GET /api/institutions?role=domestic&q=기관
 
 해외 기관은 `type` 이 `null` 입니다.
 
+기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`를 지원합니다.
+예: `/api/institutions?role=foreign&field=ai&domestic_id=...`는 해당 국내 기관과 AI 공동논문이 있는 해외 기관만 반환합니다.
+반대로 `role=domestic&field=ai&foreign_id=...`로 국내 협력 기관을 조회합니다.
+해당 범위에 공동논문이 1편 이상인 관계만 포함하고 0으로 채운 시계열만 있는 관계는 제외합니다.
+검색어·기관 유형 필터와 함께 적용되며, 관련 기관 필터를 적용한 뒤 total과 limit을 계산합니다.
+
+
 ## GET `/api/pairs`
 
 국내–해외 기관 쌍 목록. 협력 건수 합이 많은 순.

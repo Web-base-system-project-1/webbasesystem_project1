@@ -54,3 +54,7 @@ footer { margin-top: 24px; color: #7b8377; font-size: 12px; line-height: 1.7; }
 
 .pair-link { border: 0; background: none; color: #365b43; text-decoration: underline; text-align: left; max-width: 360px; white-space: normal; line-height: 1.6; }
 .selected-dot { fill: #bb6836; stroke: #bb6836; }
+
+.institution-search { display: grid; gap: 10px; }
+.institution-search input { width: 100%; padding: 10px; border: 1px solid #d4dad1; border-radius: 4px; font: inherit; }
+.institution-search small { color: #687264; font-size: 11px; }
