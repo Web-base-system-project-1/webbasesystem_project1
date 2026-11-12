@@ -1,5 +1,0 @@
-field,topic_id,topic_name,rationale
-semiconductor,T10099,GaN-based semiconductor devices and materials,질화갈륨계 반도체 재료와 고전력 트랜지스터 등 소자 연구를 함께 포착
-ai,T10036,Advanced Neural Network Applications,영상 인식·객체 탐지에서 사용하는 심층신경망과 모델 설계 연구를 포착
-bio,T10158,Cancer Immunotherapy and Biomarkers,면역항암제의 치료 기전과 치료 반응 바이오마커 연구를 포착
-quantum,T10020,Quantum Information and Cryptography,양자 얽힘·통신·암호와 양자 정보 처리 연구를 포착
