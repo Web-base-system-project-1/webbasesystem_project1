@@ -4,14 +4,17 @@
 지정하지 않으면 Git 으로 공유하는 예시 데이터 폴더를 사용한다.
 """
 
+from collections import OrderedDict
 import json
 import math
 import os
 from pathlib import Path
+from threading import Lock
 
 import pandas as pd
 
 from detectors import DETECTORS, build_panel
+from detectors.panel import YEARS
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA_DIR = "data/sample/example"
@@ -20,6 +23,7 @@ DEFAULT_DATA_DIR = "data/sample/example"
 DEFAULT_K = 3
 DEFAULT_MIN_COUNT = 3
 DEFAULT_THRESHOLDS = {"zscore": 2.5, "growth": 1.0}
+DETECTOR_CACHE_SIZE = 4
 
 SHARE_COLUMNS = [
     "domestic_id", "foreign_id", "field", "year",
@@ -91,7 +95,7 @@ class DataStore:
             columns=("domestic_id", "foreign_id", "field", "year", "detector", "threshold", "score"),
         )
         _numeric_columns(self.detections, "detections.csv", (
-            "year", "threshold", "score", "baseline_mean", "baseline_std",
+            "year", "k", "threshold", "score", "baseline_mean", "baseline_std",
             "current_value", "previous_value", "collab_count", "min_count",
         ))
         self.injections = _read_csv(
@@ -111,8 +115,10 @@ class DataStore:
             columns=("domestic_id", "field", "year", "international_total"),
         )
         _numeric_columns(self.totals, "kr_totals.csv", ("year", "international_total"))
+        self._coverage = self._read_coverage()
         self._panel = None
-        self._detector_cache = {}
+        self._detector_cache = OrderedDict()
+        self._detector_lock = Lock()
 
         self._domestic_name = dict(zip(self.domestic["domestic_id"], self.domestic["name"]))
         if self.foreign.empty:
@@ -184,10 +190,22 @@ class DataStore:
 
     # ------------------------------------------------------- 탐지 함수 호출
 
+    def _read_coverage(self):
+        path = self.data_dir / "collection_coverage.csv"
+        keys = ["field", "year"]
+        if path.exists():
+            frame = _read_csv(path, columns=(*keys, "status"))
+            _numeric_columns(frame, path.name, ("year",))
+            complete = frame.groupby(keys)["status"].agg(lambda values: values.eq("complete").all())
+            covered = complete[complete].index.to_frame(index=False)
+        else:
+            covered = self.shares[keys].drop_duplicates()
+        return pd.MultiIndex.from_frame(covered[covered["year"].isin(YEARS)])
+
     @property
     def can_detect(self):
         """collab_counts 와 kr_totals 가 모두 있으면 탐지 함수를 직접 부를 수 있다."""
-        return not self.counts.empty and not self.totals.empty
+        return not self.counts.empty and not self.totals.empty and len(self._coverage) > 0
 
     @property
     def panel(self):
@@ -195,7 +213,16 @@ class DataStore:
         if not self.can_detect:
             return None
         if self._panel is None:
-            self._panel = build_panel(self.counts, self.totals)
+            observed_years = self._coverage.get_level_values("year")
+            years = range(int(observed_years.min()), int(observed_years.max()) + 1)
+            panel = build_panel(self.counts, self.totals, years=years)
+            observed = pd.MultiIndex.from_frame(panel[["field", "year"]]).isin(self._coverage)
+            if not observed.all():
+                columns = ["collab_count", "international_total", "share"]
+                panel[columns] = panel[columns].astype(float)
+                # Retain calendar gaps so they interrupt the detector's lag and rolling window.
+                panel.loc[~observed, columns] = float("nan")
+            self._panel = panel
         return self._panel
 
     def run_detector(self, detector, k=DEFAULT_K, threshold=None, min_count=DEFAULT_MIN_COUNT):
@@ -212,10 +239,15 @@ class DataStore:
             threshold = DEFAULT_THRESHOLDS[detector]
 
         key = (self.data_version, detector, int(k), float(threshold), int(min_count))
-        if key not in self._detector_cache:
-            params = {"k": int(k), "threshold": float(threshold), "min_count": int(min_count)}
-            self._detector_cache[key] = DETECTORS[detector](self.panel, params)
-        return self._detector_cache[key]
+        with self._detector_lock:
+            if key not in self._detector_cache:
+                params = {"k": int(k), "threshold": float(threshold), "min_count": int(min_count)}
+                frame = DETECTORS[detector](self.panel, params)
+                self._detector_cache[key] = frame.dropna(subset=["collab_count"])
+                if len(self._detector_cache) > DETECTOR_CACHE_SIZE:
+                    self._detector_cache.popitem(last=False)
+            self._detector_cache.move_to_end(key)
+            return self._detector_cache[key]
 
     # -------------------------------------------------------------- 읽기 보조
 
