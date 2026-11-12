@@ -46,4 +46,6 @@ python -m pipeline.aggregate_period --input-dir data/raw/four_fields_2015_2025_v
 python -m experiments.run --counts data/processed/four_fields_2015_2025_v1/collab_counts.csv --totals data/processed/four_fields_2015_2025_v1/kr_totals.csv --seed 42 --out-dir results/four_fields_2015_2025_v1/experiment_check
 ```
 
-공유 ZIP을 받았다면 압축을 푼 집계 폴더를 `DATA_DIR`에 지정하고 Flask를 실행합니다. `/api/meta`에서 데이터 버전과 연도 범위를 확인할 수 있습니다. `collection_coverage.csv`에서 조회 완료 상태를, `preprocess_audit.csv`에서 제외 사유를, `pair_contributions.csv`와 `total_contributions.csv`에서 논문별 근거를 확인할 수 있습니다.
+Flask와 `python -m experiments.run`은 저장소의 [데이터 v1 ZIP](../data/sample/actual/four_fields_2015_2025_v1.zip)을 바로 읽습니다. ZIP에는 집계 파일, 수집 로그, 검증 기록, 시드 42의 주입·탐지·평가 결과가 있습니다. 실험 결과의 입력 버전과 파일 해시는 `experiment_manifest.json`에서 확인합니다.
+
+다른 집계 폴더나 ZIP을 사용하려면 `DATA_DIR`에 지정하세요. `/api/meta`에서 데이터 버전과 연도 범위를 확인할 수 있습니다. `collection_coverage.csv`에서 조회 완료 상태를, `preprocess_audit.csv`에서 제외 사유를, `pair_contributions.csv`와 `total_contributions.csv`에서 논문별 근거를 확인할 수 있습니다.

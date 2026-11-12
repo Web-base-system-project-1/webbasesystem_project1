@@ -9,6 +9,7 @@ import pytest
 
 from web import data_store
 from web.app import app
+from pipeline import dataset as dataset_source
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "data/sample/example"
 
@@ -34,6 +35,23 @@ def strict_json(response):
     def reject(value):
         raise AssertionError(f"Non-standard JSON value: {value}")
     return json.loads(response.get_data(as_text=True), parse_constant=reject)
+
+
+def test_default_archive_has_real_period_data_and_scenarios(monkeypatch):
+    monkeypatch.delenv("DATA_DIR", raising=False)
+    monkeypatch.setattr(dataset_source, "dotenv_values", lambda _: {})
+    monkeypatch.setattr(data_store, "_store", None)
+    with app.test_client() as client:
+        response = client.get("/api/meta")
+        assert response.status_code == 200
+        meta = response.get_json()
+        assert meta["is_real_data"] is True
+        assert meta["fields"] == ["ai", "bio", "quantum", "semiconductor"]
+        assert meta["years"] == {"min": 2015, "max": 2025}
+
+        scenarios = client.get("/api/scenarios").get_json()
+        assert scenarios["data_version"] == meta["data_version"]
+        assert "step_x2" in {item["scenario_id"] for item in scenarios["items"]}
 
 
 def test_example_meta_and_all_timelines_match_csv(client):

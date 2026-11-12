@@ -28,6 +28,7 @@ npm run dev
 화면: <http://127.0.0.1:5173/> · API 상태: <http://127.0.0.1:5001/api/health>
 두 터미널을 켜두고 사용하며, 종료는 각 터미널에서 `Ctrl+C`입니다.
 React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
+화면과 `python -m experiments.run`은 같은 2015~2025년 데이터 v1 ZIP을 기본으로 사용합니다.
 
 ## 화면과 API 구조
 
@@ -66,7 +67,7 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 
 ## 문서
 
-- [2015~2025년 데이터 v1 · 분야 정의·수집·검증](docs/period-v1.md)
+- [2015~2025년 데이터 v1 · 분야 정의·수집·검증](docs/period-v1.md) · [집계·시나리오 ZIP](data/sample/actual/four_fields_2015_2025_v1.zip)
 - [11월 11일 기간 파일럿 검증](docs/period-pilot.md) · [파일럿 집계 ZIP](data/sample/actual/four_fields_2015_2025_pilot.zip)
 - [반도체·AI·바이오·양자 실제 집계 샘플](data/sample/actual/four_fields_2025_sample/README.md) · [집계 ZIP](data/sample/actual/four_fields_2025_sample.zip)
 - [공유용 실제 집계 샘플: AI·2025년](data/sample/actual/ai_2025_sample/README.md) · [집계만 ZIP 다운로드](https://raw.githubusercontent.com/Web-base-system-project-1/webbasesystem_project1/main/data/sample/actual/ai_2025_sample.zip)
@@ -80,4 +81,4 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 - [API 명세](docs/api.md)
 - [데이터 형식 초안](docs/data-schema.md)
 
-`.venv/`, `.env`, 대용량 데이터, 실험 결과는 Git에서 제외합니다. 작은 예시 데이터와 재생성 코드는 공유합니다.
+Git에는 기본 데이터 v1 ZIP, 예시 데이터, 재생성 코드를 공유합니다. `.venv/`, `.env`, 원본, 로컬 실험 출력은 Git에서 제외합니다.

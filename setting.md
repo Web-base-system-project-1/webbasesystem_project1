@@ -20,7 +20,7 @@
 
 Python 3.12가 없으면 먼저 설치합니다. Windows에서는 설치 시 Python Launcher도 설치하고, 터미널에서 Python을 사용할 수 있도록 설치 옵션을 확인합니다. 설치 후 VS Code 터미널을 새로 엽니다.
 
-홈페이지·API 상태 확인에는 OpenAlex 키가 필요 없습니다. 샘플 논문 수집은 15번과 [샘플 수집 안내](docs/collection.md), 정제·집계는 16번과 [정제·집계 안내](docs/processing.md)를 참고하세요. 전체 범위 수집과 탐지는 다음 개발 단계입니다.
+기본 데이터 v1로 홈페이지와 API를 실행할 때는 OpenAlex 키가 필요 없습니다. 재수집·재집계·실험 실행은 [데이터 v1 안내](docs/period-v1.md)를 참고하세요.
 
 ## 2. 공용 레포 열기
 
@@ -357,7 +357,7 @@ python -c "from pathlib import Path; [Path(p).mkdir(parents=True, exist_ok=True)
 - 3번이 탐지 결과 표·What-if 패널 구현을 지원하고 4번이 전체 화면을 통합합니다.
 - 데이터 형식과 API 변경은 관련 담당자에게 알리고 `docs/`도 함께 수정합니다.
 
-현재 `pipeline/collect.py`의 샘플 수집과 `pipeline/preprocess.py`·`pipeline/aggregate.py`의 샘플 정제·집계가 구현되어 있습니다. 전체 범위 수집·정제·집계와 탐지·실험은 다음 단계입니다. 환경 확인은 `python scripts/check_setup.py`, 전체 자동 테스트는 `python -m pytest -q`로 실행합니다.
+기본 데이터 v1은 `pipeline/collect_period.py`와 `pipeline/aggregate_period.py`로 재생성합니다. 환경 확인은 `python scripts/check_setup.py`, 전체 자동 테스트는 `python -m pytest -q`로 실행합니다.
 
 ## 10. 패키지를 추가하거나 버전을 바꿀 때
 
