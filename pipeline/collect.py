@@ -94,7 +94,8 @@ def _retry_wait(response, attempt):
     return delay
 
 
-def _fetch_payload(session, key, params, timeout, record):
+def _fetch_payload(session, key, params, timeout, record, *, work_id=None):
+    endpoint = API_URL if work_id is None else f"{API_URL}/{work_id}"
     headers = {
         "Authorization": f"Bearer {key}",
         "Accept": "application/json",
@@ -104,7 +105,7 @@ def _fetch_payload(session, key, params, timeout, record):
         record("request_started", attempt=attempt)
         try:
             response = session.get(
-                API_URL,
+                endpoint,
                 params=params,
                 headers=headers,
                 timeout=(5.0, timeout),
@@ -126,9 +127,12 @@ def _fetch_payload(session, key, params, timeout, record):
                 payload = response.json()
             except ValueError:
                 raise CollectionError("OpenAlex 응답을 JSON으로 읽지 못했습니다.") from None
-            if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+            if work_id is None and (not isinstance(payload, dict) or not isinstance(payload.get("results"), list)):
                 raise CollectionError("OpenAlex 응답에 results 배열이 없습니다.")
-            record("request_succeeded", attempt=attempt, http_status=200, response_count=len(payload["results"]))
+            if work_id is not None and not isinstance(payload, dict):
+                raise CollectionError("OpenAlex 단건 응답이 논문 객체가 아닙니다.")
+            count = len(payload["results"]) if work_id is None else 1
+            record("request_succeeded", attempt=attempt, http_status=200, response_count=count)
             return payload
 
         if status in (401, 403):
@@ -142,7 +146,7 @@ def _fetch_payload(session, key, params, timeout, record):
     raise CollectionError("요청을 완료하지 못했습니다.")
 
 
-def validate_results(payload, topic_id, limit=MAX_WORKS):
+def validate_results(payload, topic_id, limit=MAX_WORKS, *, year=YEAR):
     """Validate every result; deduplicate work IDs without altering the raw data."""
     topic_id = normalize_topic_id(topic_id)
     results = payload.get("results") if isinstance(payload, dict) else None
@@ -159,8 +163,8 @@ def validate_results(payload, topic_id, limit=MAX_WORKS):
         work_id = work.get("id")
         if not isinstance(work_id, str) or not re.fullmatch(r"https://openalex\.org/W[1-9][0-9]*", work_id):
             raise CollectionError(f"응답 {index}번의 논문 ID가 올바르지 않습니다.")
-        if work.get("publication_year") != YEAR:
-            raise CollectionError(f"응답 {index}번의 출판 연도가 {YEAR}년이 아닙니다.")
+        if work.get("publication_year") != year:
+            raise CollectionError(f"응답 {index}번의 출판 연도가 {year}년이 아닙니다.")
 
         primary = work.get("primary_topic")
         try:

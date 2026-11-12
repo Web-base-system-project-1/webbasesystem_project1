@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "field": "ai",
+  "topic_id": "T11636",
+  "source_sample_sha256": "bc8749594cd311ee6a8e5dacd470668b0661e1325eadf8df2c1d3a19801fd86e",
+  "domestic_types": [
+    "education",
+    "facility",
+    "government"
+  ],
+  "cases": [
+    {
+      "work_id": "https://openalex.org/W4406598878",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 2,
+      "domestic_ids": [
+        "https://openalex.org/I67900169"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I59897056"
+      ],
+      "pair_contributions": 1,
+      "total_contributions": 1,
+      "note": "해외 대학이 두 번 반복되어도 한 쌍으로 집계"
+    },
+    {
+      "work_id": "https://openalex.org/W4407982536",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I197347611",
+        "https://openalex.org/I8991828"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I1335289525"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 2,
+      "note": "국내 대학 두 곳과 미국 병원 한 곳"
+    },
+    {
+      "work_id": "https://openalex.org/W4414085535",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I12832649"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I47519274",
+        "https://openalex.org/I889458895"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 1,
+      "note": "대만·홍콩 기관을 각각 한 쌍으로 집계"
+    },
+    {
+      "work_id": "https://openalex.org/W4406408916",
+      "expected_status": "excluded",
+      "expected_reason": "no_target_domestic_institution",
+      "all_institution_count": 1,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0,
+      "note": "국내 병원 소속만 확인되어 기본 조건에서 제외"
+    },
+    {
+      "work_id": "https://openalex.org/W4414065372",
+      "expected_status": "excluded",
+      "expected_reason": "too_many_institutions",
+      "all_institution_count": 102,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0,
+      "note": "유형 필터 전에 고유 기관 ID 102개를 확인해 제외"
+    }
+  ]
+}

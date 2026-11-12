@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "field": "bio",
+  "topic_id": "T10878",
+  "source_sample_sha256": "ff9037336fafd79acd49423704efb0e971436c3712b35248ee8219e379a88876",
+  "domestic_types": [
+    "education",
+    "facility",
+    "government"
+  ],
+  "cases": [
+    {
+      "work_id": "https://openalex.org/W4408273668",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 2,
+      "domestic_ids": [
+        "https://openalex.org/I189442560"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I120386524"
+      ],
+      "pair_contributions": 1,
+      "total_contributions": 1,
+      "note": "양쪽 기관의 반복 소속을 제거해 한 쌍으로 집계"
+    },
+    {
+      "work_id": "https://openalex.org/W4416718848",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I67900169",
+        "https://openalex.org/I4210093716"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I80281795"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 2,
+      "note": "국내 대학·시설 각각 뉴질랜드 기관과 협력"
+    },
+    {
+      "work_id": "https://openalex.org/W4407911675",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 3,
+      "domestic_ids": [
+        "https://openalex.org/I4921948"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I171210897",
+        "https://openalex.org/I189949046"
+      ],
+      "pair_contributions": 2,
+      "total_contributions": 1,
+      "note": "인도의 서로 다른 기관 두 곳을 각각 집계"
+    },
+    {
+      "work_id": "https://openalex.org/W4406110882",
+      "expected_status": "excluded",
+      "expected_reason": "no_identified_foreign_institution",
+      "all_institution_count": 1,
+      "domestic_ids": [],
+      "foreign_ids": [],
+      "pair_contributions": 0,
+      "total_contributions": 0,
+      "note": "국내 대학 한 곳만 등장"
+    },
+    {
+      "work_id": "https://openalex.org/W4408957461",
+      "expected_status": "retained",
+      "expected_reason": "included",
+      "all_institution_count": 2,
+      "domestic_ids": [
+        "https://openalex.org/I139264467"
+      ],
+      "foreign_ids": [
+        "https://openalex.org/I91045830"
+      ],
+      "pair_contributions": 1,
+      "total_contributions": 1,
+      "note": "미국 대학이 반복되어도 국내 대학과 한 쌍으로 집계"
+    }
+  ]
+}
