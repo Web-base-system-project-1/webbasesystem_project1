@@ -62,6 +62,8 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 
 ## 문서
 
+- [2015~2025년 네 토픽 수집·집계와 주입 후보 확인](docs/period-pilot.md) · [기간 집계 ZIP](data/sample/actual/four_fields_2015_2025_pilot.zip)
+- [반도체·AI·바이오·양자 실제 집계 샘플](data/sample/actual/four_fields_2025_sample/README.md) · [집계 ZIP](data/sample/actual/four_fields_2025_sample.zip)
 - [공유용 실제 집계 샘플: AI·2025년](data/sample/actual/ai_2025_sample/README.md) · [집계만 ZIP 다운로드](https://raw.githubusercontent.com/Web-base-system-project-1/webbasesystem_project1/main/data/sample/actual/ai_2025_sample.zip)
 
 - [11/8 프론트 진행 기록](docs/frontend-progress-2026-11-08.md)
