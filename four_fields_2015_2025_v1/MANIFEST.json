@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "status": "complete",
+  "data_scope": "period_pilot",
+  "is_real_data": true,
+  "created_at": "2026-11-12T02:44:59.618454+00:00",
+  "years": {
+    "min": 2015,
+    "max": 2025
+  },
+  "definitions": [
+    {
+      "field": "semiconductor",
+      "topic_id": "T10099",
+      "topic_name": "GaN-based semiconductor devices and materials",
+      "rationale": "질화갈륨계 반도체 재료와 고전력 트랜지스터 등 소자 연구를 함께 포착"
+    },
+    {
+      "field": "ai",
+      "topic_id": "T10036",
+      "topic_name": "Advanced Neural Network Applications",
+      "rationale": "영상 인식·객체 탐지에서 사용하는 심층신경망과 모델 설계 연구를 포착"
+    },
+    {
+      "field": "bio",
+      "topic_id": "T10158",
+      "topic_name": "Cancer Immunotherapy and Biomarkers",
+      "rationale": "면역항암제의 치료 기전과 치료 반응 바이오마커 연구를 포착"
+    },
+    {
+      "field": "quantum",
+      "topic_id": "T10020",
+      "topic_name": "Quantum Information and Cryptography",
+      "rationale": "양자 얽힘·통신·암호와 양자 정보 처리 연구를 포착"
+    }
+  ],
+  "source": {
+    "path": "data/raw/four_fields_2015_2025_v1/manifest.json",
+    "sha256": "d7b090db1c5c57360878d69261c122b413040f355d6bff0e2af25acdc36a197e"
+  },
+  "summary": {
+    "retained_works": 2718,
+    "domestic_institutions": 78,
+    "foreign_institutions": 2660,
+    "institution_pair_rows": 13186,
+    "pair_contributions": 19274,
+    "total_contributions": 3812,
+    "same_ror_review_groups": 0,
+    "input_works": 10463,
+    "prethreshold_works": 2796,
+    "shards": 44,
+    "duplicate_api_rows": 0,
+    "repeated_institution_occurrences": 52341,
+    "exclusion_counts": {
+      "below_domestic_period_minimum": 78,
+      "no_identified_foreign_institution": 6933,
+      "no_target_domestic_institution": 724,
+      "too_many_institutions": 10
+    },
+    "distinct_pair_fields": 7324,
+    "timeline_rows": 80564
+  },
+  "rules": {
+    "domestic_types": [
+      "education",
+      "facility",
+      "government"
+    ],
+    "min_domestic_period_works": 5,
+    "max_unique_institutions_per_work": 50,
+    "identity": "exact_openalex_id_no_ror_or_lineage_merging",
+    "zero_years": "filled only after all configured topic and year queries are complete"
+  },
+  "injection_eligibility": {
+    "baseline_years": [
+      2015,
+      2016,
+      2017,
+      2018,
+      2019,
+      2020
+    ],
+    "minimum_mean": 3,
+    "required_pairs": 20,
+    "eligible_pairs": 26,
+    "shortfall": 0,
+    "top_baselines": [
+      {
+        "domestic_id": "https://openalex.org/I139264467",
+        "foreign_id": "https://openalex.org/I1285764155",
+        "field": "bio",
+        "count_2015": 8,
+        "count_2016": 3,
+        "count_2017": 3,
+        "count_2018": 6,
+        "count_2019": 9,
+        "count_2020": 11,
+        "baseline_total": 40,
+        "baseline_mean": 6.666666666666667
+      },
+      {
+        "domestic_id": "https://openalex.org/I193775966",
+        "foreign_id": "https://openalex.org/I1285764155",
+        "field": "bio",
+        "count_2015": 4,
+        "count_2016": 3,
+        "count_2017": 3,
+        "count_2018": 6,
+        "count_2019": 8,
+        "count_2020": 14,
+        "baseline_total": 38,
+        "baseline_mean": 6.333333333333333
+      },
+      {
+        "domestic_id": "https://openalex.org/I139264467",
+        "foreign_id": "https://openalex.org/I1343551460",
+        "field": "bio",
+        "count_2015": 0,
+        "count_2016": 4,
+        "count_2017": 5,
+        "count_2018": 10,
+        "count_2019": 5,
+        "count_2020": 4,
+        "baseline_total": 28,
+        "baseline_mean": 4.666666666666667
+      },
+      {
+        "domestic_id": "https://openalex.org/I193775966",
+        "foreign_id": "https://openalex.org/I3019308854",
+        "field": "bio",
+        "count_2015": 4,
+        "count_2016": 2,
+        "count_2017": 1,
+        "count_2018": 9,
+        "count_2019": 8,
+        "count_2020": 3,
+        "baseline_total": 27,
+        "baseline_mean": 4.5
+      },
+      {
+        "domestic_id": "https://openalex.org/I31419693",
+        "foreign_id": "https://openalex.org/I4210139715",
+        "field": "semiconductor",
+        "count_2015": 5,
+        "count_2016": 7,
+        "count_2017": 3,
+        "count_2018": 4,
+        "count_2019": 2,
+        "count_2020": 4,
+        "baseline_total": 25,
+        "baseline_mean": 4.166666666666667
+      },
+      {
+        "domestic_id": "https://openalex.org/I848706",
+        "foreign_id": "https://openalex.org/I1285764155",
+        "field": "bio",
+        "count_2015": 3,
+        "count_2016": 9,
+        "count_2017": 3,
+        "count_2018": 5,
+        "count_2019": 1,
+        "count_2020": 4,
+        "baseline_total": 25,
+        "baseline_mean": 4.166666666666667
+      },
+      {
+        "domestic_id": "https://openalex.org/I139264467",
+        "foreign_id": "https://openalex.org/I4210117453",
+        "field": "bio",
+        "count_2015": 3,
+        "count_2016": 1,
+        "count_2017": 3,
+        "count_2018": 8,
+        "count_2019": 5,
+        "count_2020": 4,
+        "baseline_total": 24,
+        "baseline_mean": 4.0
+      },
+      {
+        "domestic_id": "https://openalex.org/I31419693",
+        "foreign_id": "https://openalex.org/I106785703",
+        "field": "semiconductor",
+        "count_2015": 4,
+        "count_2016": 7,
+        "count_2017": 3,
+        "count_2018": 4,
+        "count_2019": 2,
+        "count_2020": 4,
+        "baseline_total": 24,
+        "baseline_mean": 4.0
+      },
+      {
+        "domestic_id": "https://openalex.org/I193775966",
+        "foreign_id": "https://openalex.org/I105036370",
+        "field": "bio",
+        "count_2015": 0,
+        "count_2016": 0,
+        "count_2017": 1,
+        "count_2018": 5,
+        "count_2019": 13,
+        "count_2020": 4,
+        "baseline_total": 23,
+        "baseline_mean": 3.8333333333333335
+      },
+      {
+        "domestic_id": "https://openalex.org/I197347611",
+        "foreign_id": "https://openalex.org/I33213144",
+        "field": "semiconductor",
+        "count_2015": 5,
+        "count_2016": 2,
+        "count_2017": 7,
+        "count_2018": 4,
+        "count_2019": 3,
+        "count_2020": 1,
+        "baseline_total": 22,
+        "baseline_mean": 3.6666666666666665
+      }
+    ]
+  },
+  "files": {
+    "collab_counts.csv": {
+      "sha256": "e7575de008a94c074ac73d2cbaeafe192887c0df44b382e4afda67784d2b80fe"
+    },
+    "collab_shares.csv": {
+      "sha256": "7cfccc19e7684ae7cd3e2502070ae4477f595c6834b42dd6903734239d3d69b8"
+    },
+    "collection_coverage.csv": {
+      "sha256": "15b1cd9f47c68a354016042eb8df1c82528e9d1d57a98c4ccac7d8a7c707dca4"
+    },
+    "injection_candidates.csv": {
+      "sha256": "671da9d992ef935013e5210b32b1eabef02fd4c9e4051cb64f567d419af56beb"
+    },
+    "institution_review.json": {
+      "sha256": "de8faaec286e7c057b30f3b664e3994015ec22405f8354dfcc0372508e896669"
+    },
+    "institutions_foreign.csv": {
+      "sha256": "3f9faf243d4a4c7508a5745929132fbfbb1eba9319ca10457a9e7adf6b41aaaf"
+    },
+    "institutions_kr.csv": {
+      "sha256": "ade7c7dd6848300cac4fc6f7067b2bb30dbb703f0a13a56933ed2e6130e7433b"
+    },
+    "kr_totals.csv": {
+      "sha256": "c756a9a020dc0c5e1d2fe09cb59e6144ad584ddacadbf5dd99e1289f4154adae"
+    },
+    "pair_contributions.csv": {
+      "sha256": "c5b709dc8eb6c7ac135dc5ef74027dcda60f194eccb9f06e38296149e5fb6e87"
+    },
+    "preprocess_audit.csv": {
+      "sha256": "0315ff6934ec4f7d3ecbb9794f73707d8167cec249545997bf41a6ffe081bd1a"
+    },
+    "total_contributions.csv": {
+      "sha256": "435dfafb468b928fa7f6343d6439ee7a3f417820b8421fc3ad88422bf6781b9a"
+    }
+  },
+  "data_version": "openalex-four-fields-2015-2025-afe152387c5d"
+}

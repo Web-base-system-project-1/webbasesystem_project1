@@ -1,0 +1,1402 @@
+{
+  "checked_at": "2026-11-12T02:46:09.595998+00:00",
+  "summary": {
+    "domestic_institutions": 78,
+    "ror_api_requests": 78,
+    "lookup": {
+      "200": 78
+    },
+    "record_status": {
+      "active": 78
+    },
+    "country_mismatches": 0,
+    "names_matched": 78,
+    "same_normalized_domestic_name_groups": 0,
+    "same_ror_multiple_openalex_id_groups": 0
+  },
+  "same_normalized_name_groups": [],
+  "rows": [
+    {
+      "openalex_id": "https://openalex.org/I104338594",
+      "openalex_name": "Inje University",
+      "ror": "https://ror.org/04xqwq985",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Inje University",
+        "인제대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I110118728",
+      "openalex_name": "Pai Chai University",
+      "ror": "https://ror.org/05drcjw53",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Pai Chai University",
+        "배재대학교"
+      ],
+      "aliases": [
+        "PCU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I110273157",
+      "openalex_name": "Kookmin University",
+      "ror": "https://ror.org/0049erg63",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kookmin University",
+        "국민대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I111277659",
+      "openalex_name": "Chonnam National University",
+      "ror": "https://ror.org/05kzjxq56",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Chonnam National University",
+        "전남대학교"
+      ],
+      "aliases": [
+        "CNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I113018520",
+      "openalex_name": "Gyeongkuk National University",
+      "ror": "https://ror.org/04wd10e19",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Gyeongkuk National University",
+        "경국대학교",
+        "국립경국대학교"
+      ],
+      "aliases": [
+        "Andong National University",
+        "GKNU",
+        "Gyeongbuk Provincial College",
+        "Gyeongguk National University",
+        "경북도립대학교",
+        "안동대학교"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I113409471",
+      "openalex_name": "Kumoh National Institute of Technology",
+      "ror": "https://ror.org/05dkjfz60",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kumoh National Institute of Technology",
+        "금오공과대학교"
+      ],
+      "aliases": [
+        "KIT",
+        "Kumoh Gonggwa Daehakgyo",
+        "KumohGongdae"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I118373667",
+      "openalex_name": "Seoul National University of Science and Technology",
+      "ror": "https://ror.org/00chfja07",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Seoul National University of Science and Technology",
+        "서울과학기술대학교"
+      ],
+      "aliases": [
+        "SeoulTech"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I119575151",
+      "openalex_name": "Korea National University of Transportation",
+      "ror": "https://ror.org/03qqbe534",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea National University of Transportation",
+        "한국교통대학교"
+      ],
+      "aliases": [
+        "KNUT"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I120158604",
+      "openalex_name": "Kunsan National University",
+      "ror": "https://ror.org/02yj55q56",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kunsan National University",
+        "군산대학교"
+      ],
+      "aliases": [
+        "KNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I123900574",
+      "openalex_name": "Pohang University of Science and Technology",
+      "ror": "https://ror.org/04xysgw12",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Pohang University of Science and Technology",
+        "포항공과대학교"
+      ],
+      "aliases": [
+        "POSTECH"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I124633538",
+      "openalex_name": "University of Seoul",
+      "ror": "https://ror.org/05en5nh73",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "University of Seoul",
+        "서울시립대학교"
+      ],
+      "aliases": [
+        "UoS"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I125608817",
+      "openalex_name": "Korea Institute for Advanced Study",
+      "ror": "https://ror.org/041hz9568",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Institute for Advanced Study",
+        "고등과학원"
+      ],
+      "aliases": [
+        "KIAS"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I12832649",
+      "openalex_name": "Gachon University",
+      "ror": "https://ror.org/03ryywt80",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Gachon University",
+        "가천대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I1322422313",
+      "openalex_name": "Tech University of Korea",
+      "ror": "https://ror.org/0060vt104",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Tech University of Korea",
+        "한국공학대학교"
+      ],
+      "aliases": [
+        "KPU",
+        "Korea Polytechnic University",
+        "TU Korea",
+        "한국산업기술대학교"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I138925566",
+      "openalex_name": "Ewha Womans University",
+      "ror": "https://ror.org/053fp5c05",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Ewha Womans University",
+        "이화여자대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I139264467",
+      "openalex_name": "Seoul National University",
+      "ror": "https://ror.org/04h9pn542",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Seoul National University",
+        "서울대학교"
+      ],
+      "aliases": [
+        "SNU",
+        "Seoul Daehakgyo"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I141371507",
+      "openalex_name": "Soongsil University",
+      "ror": "https://ror.org/017xnm587",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Soongsil University",
+        "숭실대학교"
+      ],
+      "aliases": [
+        "SSU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I142401562",
+      "openalex_name": "Electronics and Telecommunications Research Institute",
+      "ror": "https://ror.org/03ysstz10",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Electronics and Telecommunications Research Institute",
+        "한국전자통신연구원"
+      ],
+      "aliases": [
+        "ETRI"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I145808223",
+      "openalex_name": "Hanbat National University",
+      "ror": "https://ror.org/00x514t95",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Hanbat National University",
+        "한밭대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I146429904",
+      "openalex_name": "Incheon National University",
+      "ror": "https://ror.org/02xf7p935",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Incheon National University",
+        "인천대학교"
+      ],
+      "aliases": [
+        "INU",
+        "University of Incheon"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I146824383",
+      "openalex_name": "Hallym University",
+      "ror": "https://ror.org/03sbhge02",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Hallym University",
+        "한림대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I148751991",
+      "openalex_name": "Sogang University",
+      "ror": "https://ror.org/056tn4839",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Sogang University",
+        "서강대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I152238500",
+      "openalex_name": "Chosun University",
+      "ror": "https://ror.org/01zt9a375",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Chosun University",
+        "조선대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I157485424",
+      "openalex_name": "Korea Advanced Institute of Science and Technology",
+      "ror": "https://ror.org/05apxxy63",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Advanced Institute of Science and Technology",
+        "한국과학기술원"
+      ],
+      "aliases": [
+        "KAIST"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I161024014",
+      "openalex_name": "Kwangwoon University",
+      "ror": "https://ror.org/02e9zc863",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kwangwoon University",
+        "광운대학교"
+      ],
+      "aliases": [
+        "KW"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I163753206",
+      "openalex_name": "Chungbuk National University",
+      "ror": "https://ror.org/02wnxgj78",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Chungbuk National University",
+        "충북대학교"
+      ],
+      "aliases": [
+        "CBNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I165507594",
+      "openalex_name": "Kangwon National University",
+      "ror": "https://ror.org/01mh5ph17",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kangwon National University",
+        "강원대학교"
+      ],
+      "aliases": [
+        "KNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I174101054",
+      "openalex_name": "Changwon National University",
+      "ror": "https://ror.org/04ts4qa58",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Changwon National University",
+        "창원대학교"
+      ],
+      "aliases": [
+        "CWNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I189442560",
+      "openalex_name": "Gyeongsang National University",
+      "ror": "https://ror.org/00saywf64",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Gyeongsang National University",
+        "경상대학교"
+      ],
+      "aliases": [
+        "GNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I191879574",
+      "openalex_name": "Inha University",
+      "ror": "https://ror.org/01easw929",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Inha University",
+        "인하대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I193352282",
+      "openalex_name": "Daegu Gyeongbuk Institute of Science and Technology",
+      "ror": "https://ror.org/03frjya69",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Daegu Gyeongbuk Institute of Science and Technology",
+        "대구경북과학기술원"
+      ],
+      "aliases": [
+        "DGIST"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I193775966",
+      "openalex_name": "Yonsei University",
+      "ror": "https://ror.org/01wjejq96",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Yonsei University",
+        "연세대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I196345858",
+      "openalex_name": "Chungnam National University",
+      "ror": "https://ror.org/0227as991",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Chungnam National University",
+        "충남대학교"
+      ],
+      "aliases": [
+        "CNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I197347611",
+      "openalex_name": "Korea University",
+      "ror": "https://ror.org/047dqcg40",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea University",
+        "고려대학교"
+      ],
+      "aliases": [
+        "Bosung College",
+        "Bosung Professional College"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I197867492",
+      "openalex_name": "Korea Maritime and Ocean University",
+      "ror": "https://ror.org/01v7y5b55",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Maritime and Ocean University",
+        "한국해양대학교"
+      ],
+      "aliases": [
+        "KMOU "
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I199143407",
+      "openalex_name": "Sunchon National University",
+      "ror": "https://ror.org/043jqrs76",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Sunchon National University",
+        "순천대학교"
+      ],
+      "aliases": [
+        "SNU",
+        "Suncheon Daehakgyo"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I204974687",
+      "openalex_name": "Dong-Eui University",
+      "ror": "https://ror.org/059g69b28",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Dong-Eui University",
+        "동의대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I205490536",
+      "openalex_name": "Dongguk University",
+      "ror": "https://ror.org/057q6n778",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Dongguk University",
+        "동국대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I206597221",
+      "openalex_name": "Kongju National University",
+      "ror": "https://ror.org/0373nm262",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kongju National University",
+        "공주대학교"
+      ],
+      "aliases": [
+        "KNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I24062138",
+      "openalex_name": "Konkuk University",
+      "ror": "https://ror.org/025h1m602",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Konkuk University",
+        "건국대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I24541011",
+      "openalex_name": "Soonchunhyang University",
+      "ror": "https://ror.org/03qjsrb10",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Soonchunhyang University",
+        "순천향대학교"
+      ],
+      "aliases": [
+        "SCH"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I2799611809",
+      "openalex_name": "Korea Research Institute of Standards and Science",
+      "ror": "https://ror.org/01az7b475",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Research Institute of Standards and Science",
+        "한국표준과학연구원"
+      ],
+      "aliases": [
+        "KRISS",
+        "Korea Standards Research Institute"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I2801036362",
+      "openalex_name": "Agency for Defense Development",
+      "ror": "https://ror.org/05fhe0r85",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Agency for Defense Development",
+        "국방과학연구소"
+      ],
+      "aliases": [
+        "ADD"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I28777354",
+      "openalex_name": "Sejong University",
+      "ror": "https://ror.org/00aft1q37",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Sejong University",
+        "세종대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I31419693",
+      "openalex_name": "Kyungpook National University",
+      "ror": "https://ror.org/040c17130",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kyungpook National University",
+        "경북대학교"
+      ],
+      "aliases": [
+        "KNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I31766871",
+      "openalex_name": "Sookmyung Women's University",
+      "ror": "https://ror.org/00vvvt117",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Sookmyung Women's University",
+        "숙명여자대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I35928602",
+      "openalex_name": "Kyung Hee University",
+      "ror": "https://ror.org/01zqcg218",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Kyung Hee University",
+        "경희대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I39534123",
+      "openalex_name": "Gwangju Institute of Science and Technology",
+      "ror": "https://ror.org/024kbgz78",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Gwangju Institute of Science and Technology",
+        "광주과학기술원"
+      ],
+      "aliases": [
+        "GIST",
+        "K-JIST",
+        "Kwangju Institute of Science and Technology"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I39705031",
+      "openalex_name": "Daegu Catholic University",
+      "ror": "https://ror.org/04fxknd68",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Daegu Catholic University",
+        "대구가톨릭대학교"
+      ],
+      "aliases": [
+        "Catholic University of Daegu"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I40542001",
+      "openalex_name": "University of Ulsan",
+      "ror": "https://ror.org/02c2f8975",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "University of Ulsan",
+        "울산대학교"
+      ],
+      "aliases": [
+        "UOU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210104335",
+      "openalex_name": "Institute for Basic Science",
+      "ror": "https://ror.org/00y0zf565",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Institute for Basic Science"
+      ],
+      "aliases": [
+        "IBS"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210110928",
+      "openalex_name": "Korea Institute of Ceramic Engineering and Technology",
+      "ror": "https://ror.org/024t5tt95",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Institute of Ceramic Engineering and Technology"
+      ],
+      "aliases": [
+        "KICET"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210116376",
+      "openalex_name": "SUNY Korea",
+      "ror": "https://ror.org/02d07gm56",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "SUNY Korea",
+        "한국뉴욕주립대학교"
+      ],
+      "aliases": [
+        "State University of New York Korea"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210117738",
+      "openalex_name": "Korea Photonics Technology Institute",
+      "ror": "https://ror.org/022mx4d10",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Photonics Technology Institute"
+      ],
+      "aliases": [
+        "KOPTI"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210120602",
+      "openalex_name": "Advanced Institute of Convergence Technology",
+      "ror": "https://ror.org/01w62yz22",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Advanced Institute of Convergence Technology",
+        "차세대융합기술연구원"
+      ],
+      "aliases": [
+        "AICT"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210131650",
+      "openalex_name": "Korea Electronics Technology Institute",
+      "ror": "https://ror.org/039k6f508",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Electronics Technology Institute"
+      ],
+      "aliases": [
+        "Electronic Components Researcher",
+        "KETI"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210139925",
+      "openalex_name": "Korea Basic Science Institute",
+      "ror": "https://ror.org/0417sdw47",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Basic Science Institute",
+        "한국기초과학지원연구원"
+      ],
+      "aliases": [
+        "KBSI"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4210148737",
+      "openalex_name": "CHA University",
+      "ror": "https://ror.org/04yka3j04",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "CHA University",
+        "차의과학대학교"
+      ],
+      "aliases": [
+        "CHA"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4405269456",
+      "openalex_name": "Institute of Construction and Environmental Engineering",
+      "ror": "https://ror.org/047v5p666",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Institute of Construction and Environmental Engineering",
+        "건설환경종합연구소"
+      ],
+      "aliases": [
+        "ICEE"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4575257",
+      "openalex_name": "Hanyang University",
+      "ror": "https://ror.org/046865y68",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Hanyang University",
+        "한양대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I48566637",
+      "openalex_name": "Ulsan National Institute of Science and Technology",
+      "ror": "https://ror.org/017cjz748",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Ulsan National Institute of Science and Technology",
+        "울산과학기술원"
+      ],
+      "aliases": [
+        "UNIST",
+        "Ulsan Gwahak Gisul Daehakgyo",
+        "울산과학기술대학교"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I4921948",
+      "openalex_name": "Pusan National University",
+      "ror": "https://ror.org/01an57a31",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Pusan National University",
+        "부산대학교"
+      ],
+      "aliases": [
+        "Busan National University",
+        "Miryang National University",
+        "PNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I51226738",
+      "openalex_name": "Dong-A University",
+      "ror": "https://ror.org/03qvtpc38",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Dong-A University",
+        "동아대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I52010207",
+      "openalex_name": "Keimyung University",
+      "ror": "https://ror.org/00tjv0s33",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Keimyung University",
+        "계명대학교"
+      ],
+      "aliases": [
+        "KMU",
+        "Kei-dae"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I55240360",
+      "openalex_name": "Yeungnam University",
+      "ror": "https://ror.org/05yc6p159",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Yeungnam University",
+        "영남대학교"
+      ],
+      "aliases": [
+        "YU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I57664883",
+      "openalex_name": "Ajou University",
+      "ror": "https://ror.org/03tzb2h73",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Ajou University",
+        "아주대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I58716616",
+      "openalex_name": "Korea Institute of Science and Technology",
+      "ror": "https://ror.org/05kzfa883",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Institute of Science and Technology",
+        "한국과학기술연구원"
+      ],
+      "aliases": [
+        "KIST"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I67900169",
+      "openalex_name": "Chung-Ang University",
+      "ror": "https://ror.org/01r024a98",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Chung-Ang University",
+        "중앙대학교"
+      ],
+      "aliases": [
+        "CAU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I73616290",
+      "openalex_name": "Korea Research Institute of Bioscience and Biotechnology",
+      "ror": "https://ror.org/03ep23f07",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea Research Institute of Bioscience and Biotechnology",
+        "한국생명공학연구원"
+      ],
+      "aliases": [
+        "KRIBB"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I80611190",
+      "openalex_name": "Jeonbuk National University",
+      "ror": "https://ror.org/05q92br09",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Jeonbuk National University",
+        "전북대학교"
+      ],
+      "aliases": [
+        "CBNU",
+        "Chonbuk National University",
+        "Jeonbuk Daehakgyo"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I83202590",
+      "openalex_name": "Jeju National University",
+      "ror": "https://ror.org/05hnb4n85",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Jeju National University",
+        "제주대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I848706",
+      "openalex_name": "Sungkyunkwan University",
+      "ror": "https://ror.org/04q78tk20",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Sungkyunkwan University",
+        "성균관대학교"
+      ],
+      "aliases": [
+        "SKKU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I85389745",
+      "openalex_name": "Woosong University",
+      "ror": "https://ror.org/02srty072",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Woosong University",
+        "우송대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I87111246",
+      "openalex_name": "Catholic University of Korea",
+      "ror": "https://ror.org/01fpnj063",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Catholic University of Korea",
+        "가톨릭대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I88761825",
+      "openalex_name": "Korea University of Science and Technology",
+      "ror": "https://ror.org/000qzf213",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Korea University of Science and Technology",
+        "과학기술연합대학원대학교"
+      ],
+      "aliases": [
+        "UST",
+        "University of Science and Technology"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I89015989",
+      "openalex_name": "Dankook University",
+      "ror": "https://ror.org/058pdbn81",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Dankook University",
+        "단국대학교"
+      ],
+      "aliases": [
+        "DKU",
+        "DU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I8991828",
+      "openalex_name": "Pukyong National University",
+      "ror": "https://ror.org/0433kqc49",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Pukyong National University",
+        "부경대학교"
+      ],
+      "aliases": [
+        "PKNU"
+      ],
+      "name_matches": true
+    },
+    {
+      "openalex_id": "https://openalex.org/I94588446",
+      "openalex_name": "Hongik University",
+      "ror": "https://ror.org/00egdv862",
+      "lookup": "200",
+      "ror_status": "active",
+      "countries": [
+        "KR"
+      ],
+      "official_names": [
+        "Hongik University",
+        "홍익대학교"
+      ],
+      "aliases": [],
+      "name_matches": true
+    }
+  ]
+}
