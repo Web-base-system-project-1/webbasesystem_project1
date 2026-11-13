@@ -116,6 +116,21 @@ class DataStore:
             columns=("domestic_id", "field", "year", "international_total"),
         )
         _numeric_columns(self.totals, "kr_totals.csv", ("year", "international_total"))
+        self.metrics = _read_csv(directory / "metrics.csv", required=False,
+            columns=("scenario_id", "detector", "threshold", "correction_id", "tp", "fp", "fn", "precision", "recall", "f1"))
+        self.experiment_manifest = {}
+        provenance = directory / "experiment_manifest.json"
+        if provenance.exists():
+            import hashlib
+            self.experiment_manifest = json.loads(provenance.read_text(encoding="utf-8"))
+            for filename, info in self.experiment_manifest.get("files", {}).items():
+                if filename not in ("injections.csv", "detections.csv", "metrics.csv"):
+                    continue
+                with (directory / filename).open("rb") as handle:
+                    if hashlib.sha256(handle.read()).hexdigest() != info["sha256"]:
+                        raise DataError(f"실험 결과 해시가 다릅니다: {filename}")
+        self._scenario_cache = None
+        self._scenario_lock = Lock()
         self._coverage = self._read_coverage(directory)
 
         self._domestic_name = dict(zip(self.domestic["domestic_id"], self.domestic["name"]))
@@ -359,3 +374,32 @@ def reload_store():
     global _store
     _store = None
     return get_store()
+
+
+def experiment_scenarios(store):
+    """저장 결과와 동일 버전·시드의 주입 패널만 재구성한다."""
+    from experiments.inject import build_scenarios
+    manifest = store.experiment_manifest
+    if not manifest or manifest.get("data_version") != store.data_version:
+        raise DataError("데이터 버전이 일치하는 실험 기록이 필요합니다.")
+    with store._scenario_lock:
+        if store._scenario_cache is None:
+            try:
+                panel = build_panel(store.counts, store.totals)
+                scenarios = build_scenarios(panel, seed=int(manifest["seed"]))
+            except (KeyError, ValueError) as error:
+                raise DataError("실험 시드·주입 대상을 재구성할 수 없습니다.") from error
+            # 기록된 주입 정답과 재구성 결과를 대조한다.
+            expected = store.injections
+            actual = pd.concat([s.injections for s in scenarios.values() if len(s.injections)])
+            keys = ["scenario_id", "domestic_id", "foreign_id", "field", "year"]
+            columns = keys + ["original_count", "injected_count"]
+            try:
+                pd.testing.assert_frame_equal(
+                    expected[columns].sort_values(keys).reset_index(drop=True),
+                    actual[columns].sort_values(keys).reset_index(drop=True), check_dtype=False,
+                )
+            except (AssertionError, KeyError) as error:
+                raise DataError("저장된 주입 정답과 재구성 결과가 다릅니다.") from error
+            store._scenario_cache = scenarios
+    return store._scenario_cache

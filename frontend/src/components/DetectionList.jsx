@@ -11,6 +11,7 @@ const format = (value, detector) =>
 export default function DetectionList({ detections, onSelect }) {
   const [detector, setDetector] = useState('all')
   const [order, setOrder] = useState('year')
+  const [page, setPage] = useState(0)
   const rows = detections
     .filter((row) => detector === 'all' || row.detector === detector)
     .toSorted((a, b) =>
@@ -22,6 +23,9 @@ export default function DetectionList({ detections, onSelect }) {
           a.detector.localeCompare(b.detector) ||
           a.threshold - b.threshold,
     )
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / 20))
+  const currentPage = Math.min(page, pageCount - 1)
 
   return (
     <section className="detections" aria-label="탐지 결과">
@@ -38,7 +42,10 @@ export default function DetectionList({ detections, onSelect }) {
           탐지 방법
           <select
             value={detector}
-            onChange={(event) => setDetector(event.target.value)}
+            onChange={(event) => {
+              setDetector(event.target.value)
+              setPage(0)
+            }}
           >
             <option value="all">전체</option>
             <option value="zscore">Z-score</option>
@@ -49,7 +56,10 @@ export default function DetectionList({ detections, onSelect }) {
           정렬
           <select
             value={order}
-            onChange={(event) => setOrder(event.target.value)}
+            onChange={(event) => {
+              setOrder(event.target.value)
+              setPage(0)
+            }}
           >
             <option value="year">최근 연도순</option>
             <option value="score">방법별 점수 높은 순</option>
@@ -60,6 +70,25 @@ export default function DetectionList({ detections, onSelect }) {
         같은 연도라도 탐지 방법·임계값이 다르면 별도 결과입니다. 점수는 탐지
         방법별로 비교합니다.
       </p>
+      {pageCount > 1 && (
+        <div className="pagination">
+          <button
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            이전 결과
+          </button>
+          <span>
+            {currentPage + 1} / {pageCount} 페이지
+          </span>
+          <button
+            disabled={currentPage + 1 === pageCount}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            다음 결과
+          </button>
+        </div>
+      )}
       {rows.length === 0 ? (
         <p role="status" className="detection-note">
           선택한 조건의 탐지 결과가 없습니다.
@@ -80,24 +109,29 @@ export default function DetectionList({ detections, onSelect }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, index) => (
-                <tr
-                  key={`${row.run_id}-${row.scenario_id || '원본 실시간 계산'}-${row.year}-${row.detector}-${row.threshold}-${row.correction_id}-${index}`}
-                >
-                  <th scope="row">{row.year}</th>
-                  <td>
-                    <button className="pair-link" onClick={() => onSelect(row)}>
-                      {row.domestic_name || row.domestic_id} /{' '}
-                      {row.foreign_name || row.foreign_id} · {row.field}
-                    </button>
-                  </td>
-                  <td>{labels[row.detector] || row.detector}</td>
-                  <td>{format(row.score, row.detector)}</td>
-                  <td>{format(row.threshold, row.detector)}</td>
-                  <td>{row.collab_count ?? '—'}</td>
-                  <td>{row.scenario_id || '원본 실시간 계산'}</td>
-                </tr>
-              ))}
+              {rows
+                .slice(currentPage * 20, (currentPage + 1) * 20)
+                .map((row, index) => (
+                  <tr
+                    key={`${row.run_id}-${row.scenario_id || '원본 실시간 계산'}-${row.year}-${row.detector}-${row.threshold}-${row.correction_id}-${index}`}
+                  >
+                    <th scope="row">{row.year}</th>
+                    <td>
+                      <button
+                        className="pair-link"
+                        onClick={() => onSelect(row)}
+                      >
+                        {row.domestic_name || row.domestic_id} /{' '}
+                        {row.foreign_name || row.foreign_id} · {row.field}
+                      </button>
+                    </td>
+                    <td>{labels[row.detector] || row.detector}</td>
+                    <td>{format(row.score, row.detector)}</td>
+                    <td>{format(row.threshold, row.detector)}</td>
+                    <td>{row.collab_count ?? '—'}</td>
+                    <td>{row.scenario_id || '원본 실시간 계산'}</td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

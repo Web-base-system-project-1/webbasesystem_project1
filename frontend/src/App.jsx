@@ -5,6 +5,7 @@ import TimelineChart from './components/TimelineChart'
 import TimelineSummary from './components/TimelineSummary'
 import YearlyTable from './components/YearlyTable'
 import DetectionList from './components/DetectionList'
+import ExperimentView from './components/ExperimentView'
 import './App.css'
 
 function App() {
@@ -42,7 +43,9 @@ function App() {
         getInstitutions('foreign', controller.signal),
         '/api/pairs?limit=1',
         '/api/detections?source=live&limit=1000',
-      ].map((path) => typeof path === 'string' ? getData(path, controller.signal) : path),
+      ].map((path) =>
+        typeof path === 'string' ? getData(path, controller.signal) : path,
+      ),
     )
       .then(([meta, domestic, foreign, pairs, detections]) => {
         if (controller.signal.aborted) return
@@ -114,9 +117,7 @@ function App() {
     setSelectedYear(null)
     setSelection((previous) => ({
       ...previous,
-      ...(name === 'field'
-        ? { domestic_id: '', foreign_id: '' }
-        : {}),
+      ...(name === 'field' ? { domestic_id: '', foreign_id: '' } : {}),
       [name]: value,
     }))
   }
@@ -223,6 +224,13 @@ function App() {
             </p>
           )}
         </>
+      )}
+      {catalog && (
+        <ExperimentView
+          selection={selection}
+          version={catalog.meta.data_version}
+          onSelect={selectDetection}
+        />
       )}
       <footer>
         {catalog?.meta.is_real_data === false

@@ -353,3 +353,48 @@ def scenarios():
         year_max=("year", "max"),
     )
     return envelope(store, total=len(grouped), count=len(grouped), items=records(grouped))
+
+
+@api_bp.get("/experiments")
+def experiment_runs():
+    """현재 데이터 버전으로 검증된 저장 실험의 실행 목록."""
+    store = get_store()
+    if not store.experiment_manifest or store.experiment_manifest.get("data_version") != store.data_version:
+        raise ApiError("experiment_unavailable", "현재 데이터의 저장된 실험 결과가 없습니다.", 409)
+    return envelope(store, seed=store.experiment_manifest["seed"], items=records(store.metrics))
+
+
+@api_bp.get("/experiment-timeline")
+def experiment_timeline():
+    from web.data_store import experiment_scenarios
+    store = get_store()
+    scenario_id = arg_required("scenario_id")
+    detector = arg_detector()
+    if detector is None:
+        raise ApiError("missing_parameter", "detector가 필요합니다.")
+    threshold = arg_float("threshold")
+    if threshold is None:
+        raise ApiError("missing_parameter", "threshold가 필요합니다.")
+    run = _filter_rows(store.metrics, scenario_id=scenario_id, detector=detector,
+                       threshold=threshold, correction_id="none")
+    if len(run) != 1:
+        raise ApiError("experiment_unavailable", "저장된 실험 설정이 없습니다.", 404)
+    scenarios = experiment_scenarios(store)
+    if scenario_id not in scenarios:
+        raise ApiError("invalid_parameter", "지원하지 않는 시나리오입니다.")
+    pair = {key: arg_required(key) for key in ("domestic_id", "foreign_id", "field")}
+    scenario = scenarios[scenario_id]
+    original = _filter_rows(scenarios["original"].panel, **pair).sort_values("year")
+    changed = _filter_rows(scenario.panel, **pair).sort_values("year")
+    if original.empty:
+        raise ApiError("pair_not_found", "해당 기관 쌍의 자료가 없습니다.", 404)
+    cols = ["year", "collab_count", "international_total", "share"]
+    hits = _filter_rows(store.detections, **pair, scenario_id=scenario_id,
+                        detector=detector, threshold=threshold, correction_id="none",
+                        run_id=run.iloc[0]["run_id"])
+    target = scenario.injections.iloc[0] if len(scenario.injections) else None
+    return envelope(store, scenario_id=scenario_id, seed=store.experiment_manifest["seed"],
+        original=records(original[cols]), points=records(changed[cols]),
+        detections=records(hits), injections=records(_filter_rows(scenario.injections, **pair)),
+        metrics=records(run)[0],
+        target={key: target[key] for key in pair} if target is not None else None)

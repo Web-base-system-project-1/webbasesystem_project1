@@ -58,3 +58,10 @@ footer { margin-top: 24px; color: #7b8377; font-size: 12px; line-height: 1.7; }
 .institution-search { display: grid; gap: 10px; }
 .institution-search input { width: 100%; padding: 10px; border: 1px solid #d4dad1; border-radius: 4px; font: inherit; }
 .institution-search small { color: #687264; font-size: 11px; }
+
+.experiment { margin-top: 40px; padding-top: 28px; border-top: 1px solid #ccd3cc; }
+.experiment h3 { font-size: 16px; margin-top: 28px; font-weight: 600; }
+
+.pagination { display: flex; align-items: center; gap: 16px; margin: 16px 0; font-size: 13px; }
+.pagination button { background: white; border: 1px solid #ccd3cc; border-radius: 4px; padding: 6px 12px; }
+.pagination button:disabled { opacity: .4; cursor: default; }

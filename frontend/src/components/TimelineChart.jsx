@@ -1,6 +1,10 @@
 const number = new Intl.NumberFormat('ko-KR')
 
-export default function TimelineChart({ points, selectedYear }) {
+export default function TimelineChart({
+  points,
+  selectedYear,
+  comparisonPoints = [],
+}) {
   const width = 960,
     height = 310
   const left = 48,
@@ -8,7 +12,13 @@ export default function TimelineChart({ points, selectedYear }) {
     top = 24,
     bottom = 44
   const valid = points.filter((p) => Number.isFinite(p.collab_count))
-  const maximum = Math.max(4, ...valid.map((p) => p.collab_count))
+  const maximum = Math.max(
+    4,
+    ...valid.map((p) => p.collab_count),
+    ...comparisonPoints
+      .filter((p) => Number.isFinite(p.collab_count))
+      .map((p) => p.collab_count),
+  )
   const step = Math.max(1, Math.ceil(maximum / 4))
   const ceiling = step * 4
   const x = (i) =>
@@ -43,6 +53,21 @@ export default function TimelineChart({ points, selectedYear }) {
           </text>
         </g>
       ))}
+      {comparisonPoints.length > 0 && (
+        <path
+          d={comparisonPoints
+            .map((p, i) =>
+              Number.isFinite(p.collab_count)
+                ? `${i === 0 || !Number.isFinite(comparisonPoints[i - 1].collab_count) ? 'M' : 'L'} ${x(i)} ${y(p.collab_count)}`
+                : '',
+            )
+            .join(' ')}
+          fill="none"
+          stroke="#999d96"
+          strokeWidth="2"
+          strokeDasharray="6 5"
+        />
+      )}
       <path d={path} fill="none" className="series-line" />
       {points.map((p, i) => (
         <g key={p.year}>
@@ -58,7 +83,11 @@ export default function TimelineChart({ points, selectedYear }) {
               cx={x(i)}
               cy={y(p.collab_count)}
               r={p.year === selectedYear ? 7 : 4}
-              className={p.year === selectedYear ? "series-dot selected-dot" : "series-dot"}
+              className={
+                p.year === selectedYear
+                  ? 'series-dot selected-dot'
+                  : 'series-dot'
+              }
             >
               <title>
                 {p.year}년: {number.format(p.collab_count)}편
