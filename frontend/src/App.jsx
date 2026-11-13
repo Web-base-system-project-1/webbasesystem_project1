@@ -5,6 +5,7 @@ import TimelineChart from './components/TimelineChart'
 import TimelineSummary from './components/TimelineSummary'
 import YearlyTable from './components/YearlyTable'
 import DetectionList from './components/DetectionList'
+import ExperimentView from './components/ExperimentView'
 import './App.css'
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
     field: '',
   })
   const [timelineResult, setTimelineResult] = useState(null)
+  const [selectedYear, setSelectedYear] = useState(null)
   const [retry, setRetry] = useState(0)
   const catalog = catalogResult?.retry === retry ? catalogResult.catalog : null
   const catalogError =
@@ -23,7 +25,8 @@ function App() {
     catalog && Object.values(selection).some((value) => !value)
   // 선택·데이터 버전이 바뀐 렌더부터 이전 결과를 숨깁니다.
   const result =
-    timelineResult?.catalog === catalog && timelineResult?.selection === selection
+    timelineResult?.catalog === catalog &&
+    timelineResult?.selection === selection
       ? timelineResult
       : null
   const timeline = result?.data
@@ -33,28 +36,34 @@ function App() {
 
   useEffect(() => {
     const controller = new AbortController()
-    Promise.all([
-      getData('/api/meta', controller.signal),
-      getInstitutions('domestic', controller.signal),
-      getInstitutions('foreign', controller.signal),
-      getData('/api/pairs?limit=1', controller.signal),
-    ])
-      .then(([meta, domestic, foreign, pairs]) => {
+    Promise.all(
+      [
+        '/api/meta',
+        getInstitutions('domestic', controller.signal),
+        getInstitutions('foreign', controller.signal),
+        '/api/pairs?limit=1',
+        '/api/detections?source=live&limit=1000',
+      ].map((path) =>
+        typeof path === 'string' ? getData(path, controller.signal) : path,
+      ),
+    )
+      .then(([meta, domestic, foreign, pairs, detections]) => {
         if (controller.signal.aborted) return
         if (
-          [domestic, foreign, pairs].some(
+          [domestic, foreign, pairs, detections].some(
             (data) => data.data_version !== meta.data_version,
           )
         )
           throw new Error('데이터가 갱신되었습니다. 다시 불러와 주세요.')
-        if (domestic.count < domestic.total || foreign.count < foreign.total)
-          throw new Error(
-            '기관 목록을 모두 불러올 수 없습니다. 검색 API 연결이 필요합니다.',
-          )
         const first = pairs.items[0]
         setCatalogResult({
           retry,
-          catalog: { meta, domestic: domestic.items, foreign: foreign.items },
+          catalog: {
+            meta,
+            domestic: domestic.items,
+            foreign: foreign.items,
+            detections,
+          },
         })
         setSelection({
           domestic_id: first?.domestic_id || domestic.items[0]?.id || '',
@@ -73,7 +82,7 @@ function App() {
     if (!catalog || Object.values(selection).some((value) => !value)) return
     const controller = new AbortController()
     getData(
-      `/api/timeline?${new URLSearchParams(selection)}`,
+      `/api/timeline?${new URLSearchParams({ ...selection, source: 'live' })}`,
       controller.signal,
     )
       .then((data) => {
@@ -103,11 +112,24 @@ function App() {
   }, [catalog, selection])
 
   const points = timeline?.points || []
-  const change = (event) =>
+  const change = (event) => {
+    const { name, value } = event.target
+    setSelectedYear(null)
     setSelection((previous) => ({
       ...previous,
-      [event.target.name]: event.target.value,
+      ...(name === 'field' ? { domestic_id: '', foreign_id: '' } : {}),
+      [name]: value,
     }))
+  }
+  const selectDetection = (row) => {
+    setSelection({
+      domestic_id: row.domestic_id,
+      foreign_id: row.foreign_id,
+      field: row.field,
+    })
+    setSelectedYear(row.year)
+    document.getElementById('timeline')?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
     <main>
@@ -130,10 +152,16 @@ function App() {
       <InstitutionFilters
         catalog={catalog}
         selection={selection}
+        pair={timeline?.pair}
         onChange={change}
       />
 
-      <section className="results" aria-label="조회 결과" aria-busy={loading}>
+      <section
+        id="timeline"
+        className="results"
+        aria-label="조회 결과"
+        aria-busy={loading}
+      >
         {loading ? (
           <div className="state" role="status">
             데이터를 불러오는 중입니다.
@@ -147,7 +175,9 @@ function App() {
           </div>
         ) : empty || noSelection ? (
           <div className="state" role="status">
-            선택한 조건의 데이터가 없습니다. 다른 기관이나 분야를 선택해 주세요.
+            {noSelection
+              ? '국내 기관과 해외 기관을 선택해 주세요. 어느 쪽부터 선택해도 됩니다.'
+              : '선택한 조건의 데이터가 없습니다. 다른 기관이나 분야를 선택해 주세요.'}
           </div>
         ) : (
           timeline && (
@@ -165,17 +195,43 @@ function App() {
               </div>
               <TimelineSummary points={points} />
               <div className="chart-scroll">
-                <TimelineChart points={points} />
+                <TimelineChart points={points} selectedYear={selectedYear} />
               </div>
               <YearlyTable points={points} />
-              <DetectionList
-                detections={timeline.detections || []}
-                pair={timeline.pair}
-              />
+              {selectedYear && (
+                <p role="status">선택한 탐지 연도: {selectedYear}년</p>
+              )}
             </>
           )
         )}
       </section>
+      {catalog && (
+        <>
+          {catalog.meta.is_real_data && (
+            <p className="detection-note">
+              각 분야 하위 토픽의 실제 수집 검증 데이터입니다. 전체 분야를
+              대표하지 않으며, 원본 탐지는 이상 여부가 확정된 판정이 아닙니다.
+            </p>
+          )}
+          <DetectionList
+            detections={catalog.detections.items}
+            onSelect={selectDetection}
+          />
+          {catalog.detections.count < catalog.detections.total && (
+            <p>
+              전체 {catalog.detections.total}건 중 {catalog.detections.count}건
+              표시
+            </p>
+          )}
+        </>
+      )}
+      {catalog && (
+        <ExperimentView
+          selection={selection}
+          version={catalog.meta.data_version}
+          onSelect={selectDetection}
+        />
+      )}
       <footer>
         {catalog?.meta.is_real_data === false
           ? '화면 확인을 위한 예시 데이터입니다. 실제 연구 실적과 다릅니다.'

@@ -117,6 +117,13 @@ GET /api/institutions?role=domestic&q=기관
 
 해외 기관은 `type` 이 `null` 입니다.
 
+기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`를 지원합니다.
+예: `/api/institutions?role=foreign&field=ai&domestic_id=...`는 해당 국내 기관과 AI 공동논문이 있는 해외 기관만 반환합니다.
+반대로 `role=domestic&field=ai&foreign_id=...`로 국내 협력 기관을 조회합니다.
+해당 범위에 공동논문이 1편 이상인 관계만 포함하고 0으로 채운 시계열만 있는 관계는 제외합니다.
+검색어·기관 유형 필터와 함께 적용되며, 관련 기관 필터를 적용한 뒤 total과 limit을 계산합니다.
+
+
 ## GET `/api/pairs`
 
 국내–해외 기관 쌍 목록. 협력 건수 합이 많은 순.
@@ -318,3 +325,23 @@ GET /api/institutions?role=domestic&q=기관
 - 데이터 v1의 저장된 시나리오는 `source=file`과 `scenario_id`로 조회합니다.
 - 네 분야 샘플과 기간 집계에는 `institutions_foreign.csv`가 있습니다.
   구형 데이터 폴더에서 이 파일이 없으면 API는 해외 기관 이름에 ID를, 국가에 `null`을 반환합니다.
+
+## GET `/api/experiments` (프론트 통합 추가)
+
+현재 데이터 버전과 일치하는 저장 실험의 seed와 metrics.csv 실행 행을 items로 반환합니다.
+실험 기록이 없거나 버전이 다르면 409 experiment_unavailable 입니다.
+평가 수치는 전체 실행 기준이며 기관 쌍별 수치가 아닙니다.
+
+## GET `/api/experiment-timeline` (프론트 통합 추가)
+
+필수 쿼리: domestic_id, foreign_id, field, scenario_id, detector, threshold.
+저장된 correction_id=none 실행 하나를 선택합니다. 응답은 data_version, seed, original(원본 시계열),
+points(주입 시계열), detections(해당 run_id의 탐지 근거), injections(기관 쌍별 정답),
+metrics(전체 실행 지표), target(대표 주입 기관 쌍)입니다.
+
+주입 계산을 API에서 중복 구현하지 않고 experiments.inject.build_scenarios를 재사용합니다.
+experiment_manifest의 데이터 버전·시드·주입/탐지/평가 파일 해시를 확인하고, 재구성한 주입 편수를 저장된 정답과 대조합니다.
+불일치 시 503 data_unavailable, 존재하지 않는 실행이나 기관 쌍은 404 입니다.
+증가율의 k 열은 결측일 수 있으므로 탐지 근거는 metrics의 run_id로 대응합니다.
+기존 /api/timeline은 계속 원본 시계열을 반환하며, 주입 비교에는 이 전용 API를 사용해야 합니다.
+현재 v1 ZIP의 보정 전 42회 결과를 제공하며 보정 후 결과는 별도 통합 예정입니다.
