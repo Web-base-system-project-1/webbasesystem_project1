@@ -1,77 +1,60 @@
-# React 프론트엔드 개발 환경
-
-React + JavaScript + Vite로 구성했습니다. 기관·분야 선택 시 실제 Flask API에서 타임라인을 조회합니다.
-공동논문 수 차트와 접을 수 있는 연도별 표를 제공합니다. 로딩·오류·빈 결과를 구분하고,
-빠른 선택 변경 시 이전 요청을 취소합니다.
+# React 프론트엔드
 
 ## 실행
 
-처음 설치하는 팀원과 Windows 사용자는 [팀원용 설치·실행 안내](../docs/running.md)를 참고하세요.
+팀원 최초 설치와 Windows 실행은 [팀원용 안내](../docs/running.md)를 참고합니다.
+Python 3.12, Node.js·npm이 필요합니다. 최초 `frontend/`에서 `npm ci`를 실행합니다.
 
-프로젝트 루트의 첫 번째 터미널에서 Flask 실행:
+프로젝트 최상위의 터미널 1:
 
 ```bash
-source .venv/bin/activate
-python -m flask --app web.app run --debug --port 5001
+.venv/bin/python -m flask --app web.app run --debug --port 5001
 ```
 
-Flask가 이미 실행 중이면 다시 실행하지 않습니다.
-두 번째 터미널에서 React 실행:
+터미널 2:
 
 ```bash
 cd frontend
-npm ci
 npm run dev
 ```
 
-각 팀원은 최초 실행 전에 npm ci를 실행합니다. 이후 package-lock.json의
-의존성이 변경됐을 때도 npm ci로 다시 설치합니다.
+화면은 http://127.0.0.1:5173/ 입니다. 각 서버는 Ctrl+C로 종료합니다.
+API_TARGET 환경 변수로 Vite 프록시의 목적지를 바꿀 수 있으며 기본값은 http://127.0.0.1:5001 입니다.
+이미 같은 포트의 서버가 실행 중이면 중복 실행하지 않습니다.
 
-React 화면: http://127.0.0.1:5173/
-기존 Flask 화면: http://127.0.0.1:5001/
-각 서버는 해당 터미널에서 Ctrl+C로 종료합니다.
+## 데이터
 
-## API 연결 방식
+DATA_DIR을 비우면 저장소의 `data/sample/actual/four_fields_2015_2025_v1.zip`을 바로 읽습니다.
+이전에 .env에 `frontend_period_pilot` 같은 경로를 지정했다면 비우고 Flask를 재시작해야 합니다.
+API 키·수동 압축 해제 없이 실행할 수 있습니다.
+현재 v1은 국내 78곳·해외 2,660곳, 2015~2025년 4개 분야의 지정 하위 토픽 범위입니다.
+전체 분야를 대표하는 통계로 해석하지 않습니다.
 
-화면에서는 fetch('/api/meta')처럼 상대 경로를 사용합니다.
-Vite의 개발 프록시가 /api 요청을 http://127.0.0.1:5001로 전달합니다.
-이 설정은 개발 서버용이며, 배포 시 정적 파일 제공 및 API 연결 방식은
-별도로 정해야 합니다. npm run preview에는 이 개발 프록시가 적용되지 않습니다.
+## 화면
 
-API 원본 명세: ../docs/api.md
+- 국내·해외 기관 검색: 현재 분야와 상대 기관에 공동논문 실적이 있는 기관만 조회합니다. 검색 결과는 최대 100곳이며 검색어로 좁힙니다.
+- 어느 쪽 기관부터 선택해도 됩니다. `전체 · 선택 해제`로 다른 조합을 찾고, 분야 변경 시 두 기관 선택을 초기화합니다.
+- 타임라인: 원본 공동논문 수, 합계·최다 수치와 연도별 표.
+- 원본 탐지 목록: source=live의 기본 설정(z-score 2.5/k=3, 증가율 100%/최소 3편). 목록 클릭 시 기관·분야 및 강조 연도가 변경됩니다. 목록은 페이지당 20건 표시합니다.
+- 주입 실험: 원본·2/3/5배 지속 증가·점진·급증·미끼를 선택하고, 탐지 방법과 저장된 필수 임계값을 비교합니다.
+- 비교 차트: 원본 회색 점선, 시나리오 초록 실선. 주입 대상 보기 버튼으로 대표 사례를 선택합니다.
+- 근거 표: 원본/시나리오 건수·비중, 유효한 주입 여부, 탐지 점수와 기준값. Z-score 기준값은 과거 협력 비중 평균, 증가율 기준값은 전년 건수입니다.
+- 평가: 전체 실험의 TP/FP/FN·Precision·Recall·F1·유효 주입 행 Recall·평균 지연. 기관별 수치가 아닙니다.
 
-| API | 다음 화면에서 사용할 용도 |
-| --- | --- |
-| /api/health | 서버 상태 확인 |
-| /api/meta | 분야, 연도 범위, 예시 데이터 여부 |
-| /api/institutions?role=domestic | 국내 기관 목록 |
-| /api/institutions?role=foreign | 해외 기관 목록 |
-| /api/pairs | 데이터가 있는 기관 쌍 조회 |
-| /api/timeline?domestic_id=...&foreign_id=...&field=... | 연도별 공동논문 수와 비중 |
-
-주의 사항:
-- 기본 데이터는 2015~2025년 실제 집계 v1입니다.
-- 분야 선택지는 /api/meta의 fields에서 받습니다.
-- share는 0~1이며, null은 0과 다르게 처리합니다.
-- 여러 응답의 data_version을 확인해 같은 데이터인지 판단합니다.
-- /api/whatif는 아직 구현되지 않았습니다.
+현재 비교 화면은 v1 ZIP에 포함된 보정 전 42회 실험 결과를 사용합니다. #9의 보정 2종·84회 재실행 결과 비교는 후속 작업입니다.
+실험상 오탐은 주입 정답표에 없는 탐지이며 실제 연구의 이상 여부가 아닙니다.
+다른 데이터에 저장 실험 기록이 없거나 버전이 맞지 않으면 실험 불가 안내를 표시합니다.
 
 ## 파일 역할
 
-- src/main.jsx: React 실행 시작점
-- src/App.jsx: 조회 상태·선택 상태 관리와 전체 화면 구성
-- src/api/client.js: 공통 JSON 요청과 HTTP 오류 처리
-- src/components/InstitutionFilters.jsx: 기관·분야 선택 메뉴
-- src/components/TimelineChart.jsx: 연도별 공동논문 수 차트
-- src/components/TimelineSummary.jsx: 기간 합계·연간 최다 수치
-- src/components/YearlyTable.jsx: 접이식 연도별 수치 표
-- src/App.css, src/index.css: 화면 스타일
-- vite.config.js: 개발 서버와 API 프록시 설정
-- package.json: 의존성과 실행 명령
-- package-lock.json: 설치 버전 고정; Git에 함께 커밋
-- .gitignore: node_modules와 dist 등 생성 파일 제외
+- src/App.jsx: 조회·선택 상태와 화면 구성
+- src/api/client.js: JSON 요청·오류 처리, 기관 목록 페이지 로딩
+- src/components/InstitutionFilters.jsx, InstitutionSearch.jsx: 연관 기관 검색·분야 선택
+- src/components/TimelineChart.jsx, TimelineSummary.jsx, YearlyTable.jsx: 차트·요약·표
+- src/components/DetectionList.jsx: 탐지 목록·필터·정렬·페이지 이동
+- src/components/ExperimentView.jsx: 시나리오 비교·탐지 근거·전체 평가
 
-## 확인 명령
+## 검증
 
 ```bash
 npm test
@@ -79,54 +62,4 @@ npm run lint
 npm run build
 ```
 
-API 요청·오류·취소 처리 회귀 테스트 8개를 실행합니다. build 결과는 dist/에 생성됩니다.
-
-## 탐지 목록 및 클릭 연동
-
-/api/detections?limit=1000에서 전체 탐지 목록을 조회합니다. 총 건수보다 잘린 경우 안내합니다.
-기관 쌍 버튼을 누르면 국내·해외 기관과 분야 선택이 바뀌고 타임라인에서 탐지 연도를 강조합니다.
-수동으로 조건을 변경하면 연도 강조가 해제됩니다. 탐지 방법 필터와 방법별 점수 정렬을 제공합니다.
-
-## 실제 데이터 연결 확인
-
-프로젝트 루트에서 기존 Flask를 종료한 뒤 Mac에서는 다음처럼 실행할 수 있습니다.
-
-```bash
-DATA_DIR=data/sample/actual/ai_2025_sample .venv/bin/python -m flask --app web.app run --port 5001
-```
-
-Windows는 기존 .env의 DATA_DIR만 해당 경로로 설정하고 Flask를 재시작합니다.
-다른 환경 변수나 키를 덮어쓰지 않습니다.
-현재 실제 샘플은 AI·2025년 한 해, 기관 쌍 158개입니다. 해외 기관은 이름 대신 ID가 표시될 수 있습니다.
-탐지·주입 파일이 없어 목록은 비어 있으며, 이를 정상/이상 판정으로 해석하면 안 됩니다.
-여러 해 실제 탐지 결과와 실시간 탐지 API 통합은 후속 작업입니다.
-
-## 다년 데이터 통합 개발 (11/12)
-
-현재 기능 브랜치는 데이터 PR #6과 API PR #7을 로컬 통합한 상태입니다.
-공유 ZIP `data/sample/actual/four_fields_2015_2025_pilot.zip`을 풀고 CSV와 MANIFEST.json이 들어 있는 폴더를 DATA_DIR로 지정합니다.
-현재 로컬에서는 `data/processed/frontend_period_pilot`을 사용합니다(압축 해제 파일은 Git 제외).
-
-프로젝트 루트의 터미널 1:
-
-```bash
-DATA_DIR=data/processed/frontend_period_pilot .venv/bin/python -m flask --app web.app run --port 5002
-```
-
-터미널 2:
-
-```bash
-cd frontend
-API_TARGET=http://127.0.0.1:5002 npm run dev -- --port 5174
-```
-
-http://127.0.0.1:5174/ 에 접속합니다. API_TARGET을 생략하면 기존 5001 프록시를 사용합니다.
-기관명·ID 검색은 전체 기관을 대상으로 하며 결과는 100건까지 표시합니다. 결과가 많으면 검색어를 구체화합니다.
-탐지 목록과 타임라인은 source=live로 조회합니다. 기본 탐지 조건은 z-score 2.5(k=3), 증가율 100%(최소 3편)입니다.
-현재 44건은 원본에서 계산한 탐지이며 정답으로 확정된 이상 사례가 아닙니다.
-
-### 기관 선택 연동
-
-현재 분야와 선택한 상대 기관에 실제 공동논문이 있는 기관만 검색·선택 목록에 표시합니다.
-국내·해외 어느 쪽부터 선택해도 되며, 다른 조합을 새로 찾으려면 상대 기관의 `전체 · 선택 해제`를 선택합니다.
-분야를 변경하면 두 기관 선택을 초기화합니다. 검색은 해당 협력 기관 범위 안에서 수행합니다.
+빌드 결과는 dist/에 생성합니다. npm run preview에는 개발 API 프록시를 제공하지 않으므로 통합 확인은 npm run dev를 사용합니다.
