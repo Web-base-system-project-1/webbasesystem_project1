@@ -28,6 +28,7 @@ npm run dev
 화면: <http://127.0.0.1:5173/> · API 상태: <http://127.0.0.1:5001/api/health>
 두 터미널을 켜두고 사용하며, 종료는 각 터미널에서 `Ctrl+C`입니다.
 React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
+화면과 `python -m experiments.run`은 같은 2015~2025년 데이터 v1 ZIP을 기본으로 사용합니다.
 
 ## 화면과 API 구조
 
@@ -60,12 +61,14 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 - OpenAlex 2025년 한국 기관 참여 논문 샘플 수집기, 오프라인 결과 검증과 자동 테스트.
 - 샘플 정제·기관 쌍 집계·협력 비중·논문별 근거와 원본 5편 대조 검증.
 
-기간 집계는 분야별 하위 토픽 하나씩을 사용한 2015~2025년 데이터입니다.
-실제 주입 실험용 후보 확보, 국가 집계, 분석 화면의 기준선·시나리오 연결은 이후 작업입니다.
+데이터 v1은 네 분야별 토픽 하나씩을 사용한 2015~2025년 집계입니다.
+필수 주입 실험의 기준에 맞는 기관 쌍 26개를 확보했습니다.
+국가 집계와 분석 화면의 기준선·시나리오 연결은 이후 작업입니다.
 
 ## 문서
 
-- [2015~2025년 네 토픽 수집·집계와 주입 후보 확인](docs/period-pilot.md) · [기간 집계 ZIP](data/sample/actual/four_fields_2015_2025_pilot.zip)
+- [2015~2025년 데이터 v1 · 분야 정의·수집·검증](docs/period-v1.md) · [집계·시나리오 ZIP](data/sample/actual/four_fields_2015_2025_v1.zip)
+- [11월 11일 기간 파일럿 검증](docs/period-pilot.md) · [파일럿 집계 ZIP](data/sample/actual/four_fields_2015_2025_pilot.zip)
 - [반도체·AI·바이오·양자 실제 집계 샘플](data/sample/actual/four_fields_2025_sample/README.md) · [집계 ZIP](data/sample/actual/four_fields_2025_sample.zip)
 - [공유용 실제 집계 샘플: AI·2025년](data/sample/actual/ai_2025_sample/README.md) · [집계만 ZIP 다운로드](https://raw.githubusercontent.com/Web-base-system-project-1/webbasesystem_project1/main/data/sample/actual/ai_2025_sample.zip)
 
@@ -78,4 +81,4 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 - [API 명세](docs/api.md)
 - [데이터 형식 초안](docs/data-schema.md)
 
-`.venv/`, `.env`, 대용량 데이터, 실험 결과는 Git에서 제외합니다. 작은 예시 데이터와 재생성 코드는 공유합니다.
+Git에는 기본 데이터 v1 ZIP, 예시 데이터, 재생성 코드를 공유합니다. `.venv/`, `.env`, 원본, 로컬 실험 출력은 Git에서 제외합니다.

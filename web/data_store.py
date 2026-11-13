@@ -1,23 +1,20 @@
 """서버가 켜질 때 한 번만 CSV를 읽어 메모리에 들고 있는다.
 
-요청마다 파일을 다시 읽지 않는다. 읽는 폴더는 .env 의 DATA_DIR 로 바꿀 수 있고,
-지정하지 않으면 Git 으로 공유하는 예시 데이터 폴더를 사용한다.
+요청마다 파일을 다시 읽지 않는다. DATA_DIR로 집계 폴더나 ZIP을 지정할 수 있다.
+기본값은 Git으로 공유하는 2015~2025년 데이터 v1 ZIP이다.
 """
 
 from collections import OrderedDict
 import json
 import math
-import os
-from pathlib import Path
 from threading import Lock
+from zipfile import BadZipFile
 
 import pandas as pd
 
 from detectors import DETECTORS, build_panel
 from detectors.panel import YEARS
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA_DIR = "data/sample/example"
+from pipeline.dataset import dataset_path, open_dataset
 
 # 탐지 기본값. 명세의 필수 임계값 중 가운데 값을 기본으로 쓴다.
 DEFAULT_K = 3
@@ -35,18 +32,14 @@ class DataError(Exception):
     """데이터 폴더나 파일 형식 문제."""
 
 
-def _resolve(value):
-    path = Path(value).expanduser()
-    return path if path.is_absolute() else PROJECT_ROOT / path
-
-
 def _read_csv(path, required=True, columns=()):
     if not path.exists():
         if required:
             raise DataError(f"필수 파일이 없습니다: {path.name}")
         return pd.DataFrame(columns=columns)
     try:
-        frame = pd.read_csv(path, encoding="utf-8")
+        with path.open("rb") as handle:
+            frame = pd.read_csv(handle, encoding="utf-8")
     except (OSError, UnicodeError, pd.errors.ParserError, pd.errors.EmptyDataError) as error:
         raise DataError(f"CSV 파일을 읽을 수 없습니다: {path.name}") from error
     missing = [column for column in columns if column not in frame.columns]
@@ -77,21 +70,29 @@ class DataStore:
     """한 데이터 폴더를 읽어 조회용으로 들고 있는 객체."""
 
     def __init__(self, data_dir=None):
-        self.data_dir = _resolve(data_dir or os.environ.get("DATA_DIR") or DEFAULT_DATA_DIR)
-        if not self.data_dir.is_dir():
-            raise DataError(f"데이터 폴더가 없습니다: {self.data_dir}")
+        self.data_dir = dataset_path(data_dir)
+        try:
+            with open_dataset(self.data_dir) as directory:
+                self.data_name = directory.name
+                self._load_tables(directory)
+        except (OSError, BadZipFile, ValueError) as error:
+            raise DataError(f"데이터를 읽을 수 없습니다: {self.data_dir.name}") from error
+        self._panel = None
+        self._detector_cache = OrderedDict()
+        self._detector_lock = Lock()
 
-        self.manifest = self._read_manifest()
-        self.shares = self._read_shares()
+    def _load_tables(self, directory):
+        self.manifest = self._read_manifest(directory)
+        self.shares = self._read_shares(directory)
         self.domestic = _read_csv(
-            self.data_dir / "institutions_kr.csv", columns=("domestic_id", "name", "type", "ror"),
+            directory / "institutions_kr.csv", columns=("domestic_id", "name", "type", "ror"),
         )
         self.foreign = _read_csv(
-            self.data_dir / "institutions_foreign.csv", required=False,
+            directory / "institutions_foreign.csv", required=False,
             columns=("foreign_id", "name", "country_code"),
         )
         self.detections = _read_csv(
-            self.data_dir / "detections.csv", required=False,
+            directory / "detections.csv", required=False,
             columns=("domestic_id", "foreign_id", "field", "year", "detector", "threshold", "score"),
         )
         _numeric_columns(self.detections, "detections.csv", (
@@ -99,26 +100,23 @@ class DataStore:
             "current_value", "previous_value", "collab_count", "min_count",
         ))
         self.injections = _read_csv(
-            self.data_dir / "injections.csv", required=False,
+            directory / "injections.csv", required=False,
             columns=("scenario_id", "domestic_id", "foreign_id", "field", "year"),
         )
         _numeric_columns(self.injections, "injections.csv", ("year",))
 
         # 탐지 함수에 넣을 원자료. 둘 다 있어야 패널을 만들 수 있다.
         self.counts = _read_csv(
-            self.data_dir / "collab_counts.csv", required=False,
+            directory / "collab_counts.csv", required=False,
             columns=("domestic_id", "foreign_id", "field", "year", "collab_count"),
         )
         _numeric_columns(self.counts, "collab_counts.csv", ("year", "collab_count"))
         self.totals = _read_csv(
-            self.data_dir / "kr_totals.csv", required=False,
+            directory / "kr_totals.csv", required=False,
             columns=("domestic_id", "field", "year", "international_total"),
         )
         _numeric_columns(self.totals, "kr_totals.csv", ("year", "international_total"))
-        self._coverage = self._read_coverage()
-        self._panel = None
-        self._detector_cache = OrderedDict()
-        self._detector_lock = Lock()
+        self._coverage = self._read_coverage(directory)
 
         self._domestic_name = dict(zip(self.domestic["domestic_id"], self.domestic["name"]))
         if self.foreign.empty:
@@ -129,9 +127,9 @@ class DataStore:
 
     # ------------------------------------------------------------------ 메타
 
-    def _read_manifest(self):
+    def _read_manifest(self, directory):
         for name in ("MANIFEST.json", "aggregation_manifest.json"):
-            path = self.data_dir / name
+            path = directory / name
             if path.exists():
                 try:
                     manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -149,7 +147,7 @@ class DataStore:
         return (
             manifest.get("data_version")
             or manifest.get("created_at")
-            or f"dir:{self.data_dir.name}"
+            or f"dir:{self.data_name}"
         )
 
     @property
@@ -164,7 +162,7 @@ class DataStore:
             "data_version": self.data_version,
             "data_scope": self.manifest.get("data_scope", "unknown"),
             "is_real_data": self.is_real_data,
-            "data_dir": self.data_dir.name,
+            "data_dir": self.data_name,
             "fields": sorted(self.shares["field"].unique().tolist()),
             "years": {
                 "min": int(years.min()) if len(years) else None,
@@ -190,8 +188,8 @@ class DataStore:
 
     # ------------------------------------------------------- 탐지 함수 호출
 
-    def _read_coverage(self):
-        path = self.data_dir / "collection_coverage.csv"
+    def _read_coverage(self, directory):
+        path = directory / "collection_coverage.csv"
         keys = ["field", "year"]
         if path.exists():
             frame = _read_csv(path, columns=(*keys, "status"))
@@ -251,8 +249,8 @@ class DataStore:
 
     # -------------------------------------------------------------- 읽기 보조
 
-    def _read_shares(self):
-        frame = _read_csv(self.data_dir / "collab_shares.csv", columns=SHARE_COLUMNS)
+    def _read_shares(self, directory):
+        frame = _read_csv(directory / "collab_shares.csv", columns=SHARE_COLUMNS)
         return _numeric_columns(frame, "collab_shares.csv", (
             "year", "collab_count", "international_total", "share",
         ))
