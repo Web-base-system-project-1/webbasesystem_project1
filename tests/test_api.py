@@ -323,3 +323,81 @@ def test_detector_cache_stays_bounded(client):
             "/api/detections", query_string={"detector": "zscore", "threshold": threshold},
         ).status_code == 200
     assert len(data_store.get_store()._detector_cache) == data_store.DETECTOR_CACHE_SIZE
+
+
+def test_overview_groups_by_country_field_year(client):
+    body = strict_json(client.get("/api/overview?field=ai&year=2021"))
+    assert body["fields"] == ["ai"] and body["years"] == [2021]
+    assert body["total"] == len(body["items"]) >= 1
+    for row in body["items"]:
+        assert set(row) >= {
+            "country_code", "field", "year", "collab_count", "international_total",
+            "share", "composition", "pairs", "domestic_institutions",
+            "foreign_institutions", "detections",
+        }
+        assert row["field"] == "ai" and row["year"] == 2021 and row["collab_count"] > 0
+
+
+def test_overview_composition_sums_to_one_per_cell(client):
+    body = strict_json(client.get("/api/overview?limit=1000"))
+    totals = {}
+    for row in body["items"]:
+        key = (row["field"], row["year"])
+        totals[key] = totals.get(key, 0.0) + row["composition"]
+    assert totals
+    for key, value in totals.items():
+        assert abs(value - 1.0) < 1e-9, f"{key} 의 composition 합이 {value}"
+
+
+def test_overview_country_filter_keeps_full_denominator(client):
+    whole = strict_json(client.get("/api/overview?field=ai&year=2021&limit=1000"))
+    one = strict_json(client.get("/api/overview?field=ai&year=2021&country=US"))
+    assert one["items"] == [r for r in whole["items"] if r["country_code"] == "US"]
+
+
+def test_overview_detection_counts_match_detections_endpoint(client):
+    query = "field=ai&source=live&detector=zscore&threshold=2.5"
+    overview = strict_json(client.get(f"/api/overview?{query}&limit=1000"))
+    listed = strict_json(client.get(f"/api/detections?{query}&limit=1000"))
+    assert sum(row["detections"] for row in overview["items"]) == listed["total"]
+
+
+def test_overview_rejects_bad_year(client):
+    assert client.get("/api/overview?year=abc").status_code == 400
+
+
+def test_scenarios_list_every_scenario_including_decoy(client):
+    body = strict_json(client.get("/api/scenarios"))
+    names = {item["scenario_id"] for item in body["items"]}
+    for row in body["items"]:
+        assert set(row) >= {"scenario_id", "injected_rows", "pairs", "effective_rows",
+                            "injection_type", "multiplier", "year_min", "year_max"}
+        assert row["effective_rows"] <= row["injected_rows"]
+    assert body["total"] == len(body["items"]) == len(names)
+
+
+def test_metrics_is_409_when_the_dataset_has_no_experiment(client):
+    response = client.get("/api/metrics")
+    assert response.status_code == 409
+    assert response.get_json()["error"]["code"] == "metrics_unavailable"
+
+
+def test_metrics_reads_the_experiment_table(monkeypatch):
+    monkeypatch.delenv("DATA_DIR", raising=False)
+    monkeypatch.setattr(dataset_source, "dotenv_values", lambda _: {})
+    monkeypatch.setattr(data_store, "_store", None)
+    with app.test_client() as client:
+        body = strict_json(client.get("/api/metrics?detector=zscore&threshold=2.5"))
+        assert "decoy_x3" in body["scenarios"] and body["detectors"] == ["growth", "zscore"]
+        assert body["total"] == len(body["items"]) == 7
+        for row in body["items"]:
+            assert row["detector"] == "zscore" and row["threshold"] == 2.5
+            assert set(row) >= {"scenario_id", "tp", "fp", "fn", "precision",
+                                "recall", "f1", "delay_mean", "decoy_fp"}
+        scores = [row["f1"] for row in body["items"]]
+        assert scores == sorted(scores, reverse=True), "기본 정렬은 f1 내림차순"
+
+        decoy = next(r for r in body["items"] if r["scenario_id"] == "decoy_x3")
+        assert decoy["decoy_fp"] is not None, "미끼 오탐 수는 항상 실려야 한다"
+
+        assert client.get("/api/metrics?sort=nope").status_code == 400
