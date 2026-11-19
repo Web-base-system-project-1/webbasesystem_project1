@@ -71,3 +71,18 @@ def test_growth_evidence_uses_run_id_not_nullable_k(experiment_client):
     assert hit['collab_count'] == 75
     assert hit['baseline_value'] == 11
     assert hit['score'] == pytest.approx((75 - 11) / 11)
+
+
+@pytest.mark.parametrize("manifest", [[], {"files": []}, {"files": {"metrics.csv": {}}}])
+def test_invalid_experiment_metadata_returns_structured_error(tmp_path, monkeypatch, manifest):
+    import json
+    import shutil
+    folder = tmp_path / "data"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "data/sample/example", folder)
+    (folder / "experiment_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setenv("DATA_DIR", str(folder))
+    monkeypatch.setattr(data_store, "_store", None)
+    with app.test_client() as client:
+        response = client.get("/api/experiments")
+        assert response.status_code == 503
+        assert response.get_json()["error"]["code"] == "data_unavailable"

@@ -118,14 +118,25 @@ class DataStore:
         _numeric_columns(self.totals, "kr_totals.csv", ("year", "international_total"))
         self.metrics = _read_csv(directory / "metrics.csv", required=False,
             columns=("scenario_id", "detector", "threshold", "correction_id", "tp", "fp", "fn", "precision", "recall", "f1"))
+        _numeric_columns(self.metrics, "metrics.csv", (
+            "threshold", "k", "min_count", "tp", "fp", "fn", "precision", "recall",
+            "f1", "recall_effective", "delay_mean", "missed_pairs", "decoy_fp",
+        ))
         self.experiment_manifest = {}
         provenance = directory / "experiment_manifest.json"
         if provenance.exists():
             import hashlib
             self.experiment_manifest = json.loads(provenance.read_text(encoding="utf-8"))
-            for filename, info in self.experiment_manifest.get("files", {}).items():
+            if not isinstance(self.experiment_manifest, dict):
+                raise DataError("실험 메타데이터는 JSON 객체여야 합니다.")
+            files = self.experiment_manifest.get("files", {})
+            if not isinstance(files, dict):
+                raise DataError("실험 파일 해시 목록은 JSON 객체여야 합니다.")
+            for filename, info in files.items():
                 if filename not in ("injections.csv", "detections.csv", "metrics.csv"):
                     continue
+                if not isinstance(info, dict) or not isinstance(info.get("sha256"), str):
+                    raise DataError(f"실험 파일 해시 형식이 다릅니다: {filename}")
                 with (directory / filename).open("rb") as handle:
                     if hashlib.sha256(handle.read()).hexdigest() != info["sha256"]:
                         raise DataError(f"실험 결과 해시가 다릅니다: {filename}")
