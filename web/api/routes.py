@@ -301,6 +301,22 @@ def _live_detections(store, detector, k, threshold, min_count, filters):
     return found, {"evaluated_rows": evaluated, "skipped": skipped}, used
 
 
+def resolve_detections(store, filters):
+    """source 에 따라 탐지 결과를 구한다. /detections 와 /overview 가 함께 쓴다."""
+    detector = arg_detector()
+    if _pick_source(store) == "live":
+        found, summary, params = _live_detections(
+            store, detector,
+            k=arg_int("k", default=DEFAULT_K, minimum=2, maximum=10),
+            threshold=arg_float("threshold"),
+            min_count=arg_int("min_count", default=DEFAULT_MIN_COUNT, minimum=0),
+            filters=filters,
+        )
+        return found, "live", params, summary
+    found = _file_detections(store, detector, arg_float("threshold"), filters)
+    return found, "file", [], {"evaluated_rows": len(found), "skipped": {}}
+
+
 @api_bp.get("/detections")
 def detections():
     """탐지 목록과 근거. 점수가 높은 순.
@@ -311,26 +327,13 @@ def detections():
     """
     store = get_store()
     limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
-    detector = arg_detector()
     filters = {
         "field": request.args.get("field"),
         "domestic_id": request.args.get("domestic_id"),
         "foreign_id": request.args.get("foreign_id"),
         "year": arg_int("year"),
     }
-
-    if _pick_source(store) == "live":
-        found, summary, used = _live_detections(
-            store, detector,
-            k=arg_int("k", default=DEFAULT_K, minimum=2, maximum=10),
-            threshold=arg_float("threshold"),
-            min_count=arg_int("min_count", default=DEFAULT_MIN_COUNT, minimum=0),
-            filters=filters,
-        )
-        source, params = "live", used
-    else:
-        found = _file_detections(store, detector, arg_float("threshold"), filters)
-        source, params, summary = "file", [], {"evaluated_rows": len(found), "skipped": {}}
+    found, source, params, summary = resolve_detections(store, filters)
 
     total = len(found)
     if total and "score" in found.columns:
@@ -339,21 +342,84 @@ def detections():
                     total=total, count=min(total, limit), items=_with_names(store, found, limit))
 
 
+# --------------------------------------------------------------------- 개요
+
+@api_bp.get("/overview")
+def overview():
+    """국가·분야·연도별 협력 집계와 탐지 건수. 개요 히트맵용."""
+    store = get_store()
+    field = request.args.get("field")
+    year = arg_int("year")
+    country = request.args.get("country")
+    limit = arg_int("limit", default=500, minimum=1, maximum=MAX_LIMIT)
+
+    frame = store.overview(field=field, year=year, country=country)
+    found, source, params, summary = resolve_detections(store, {"field": field, "year": year})
+
+    counts = {}
+    if len(found):
+        tagged = store.with_country(found)
+        if country:
+            tagged = tagged[tagged["country_code"] == country]
+        grouped = tagged.groupby(["country_code", "field", "year"], dropna=False).size()
+        counts = {(c, f, int(y)): int(n) for (c, f, y), n in grouped.items()}
+
+    items = [{**row, "detections": counts.get(
+        (row["country_code"], row["field"], row["year"]), 0)}
+        for row in records(frame.head(limit))]
+
+    return envelope(
+        store, source=source, params=params, summary=summary,
+        fields=sorted(frame["field"].unique().tolist()),
+        years=sorted(int(y) for y in frame["year"].unique()),
+        total=len(frame), count=len(items), items=items,
+    )
+
+
+# --------------------------------------------------------------------- 평가
+
+@api_bp.get("/metrics")
+def metrics():
+    """주입 실험의 정량 평가표. experiments.evaluate 가 만든 metrics.csv 를 돌려준다."""
+    store = get_store()
+    if store.metrics.empty:
+        raise ApiError(
+            "metrics_unavailable",
+            "이 데이터에는 metrics.csv 가 없습니다. python -m experiments.run 으로 만듭니다.",
+            status=409,
+        )
+    frame = _filter_rows(
+        store.metrics,
+        scenario_id=request.args.get("scenario_id") or None,
+        detector=arg_detector(),
+        threshold=arg_float("threshold"),
+        k=arg_int("k"), min_count=arg_int("min_count"),
+        correction_id=request.args.get("correction_id") or None,
+    )
+    sort_by = request.args.get("sort", "f1")
+    if sort_by not in frame.columns:
+        raise ApiError("invalid_parameter", f"sort 로 쓸 수 없는 열입니다: {sort_by}")
+    frame = frame.sort_values(sort_by, ascending=False, na_position="last")
+    limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
+    return envelope(
+        store, sort=sort_by,
+        scenarios=sorted(store.metrics["scenario_id"].dropna().unique().tolist()),
+        detectors=sorted(store.metrics["detector"].dropna().unique().tolist()),
+        total=len(frame), count=min(len(frame), limit),
+        items=records(frame.head(limit)),
+    )
+
+
 # -------------------------------------------------------------------- 시나리오
 
 @api_bp.get("/scenarios")
 def scenarios():
-    """주입 시나리오 목록과 정답 건수."""
+    """주입 시나리오 목록. 정답 행 수, 주입 유형과 배수, 실제로 값이 바뀐 행 수."""
     store = get_store()
-    if store.injections.empty:
+    frame = store.scenario_summary()
+    if frame.empty:
         return envelope(store, total=0, count=0, items=[])
-    grouped = store.injections.groupby("scenario_id", as_index=False).agg(
-        injected_rows=("year", "count"),
-        year_min=("year", "min"),
-        year_max=("year", "max"),
-    )
-    return envelope(store, total=len(grouped), count=len(grouped), items=records(grouped))
-
+    return envelope(store, total=len(frame), count=len(frame), items=records(frame))
 
 @api_bp.get("/experiments")
 def experiment_runs():

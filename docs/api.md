@@ -295,17 +295,109 @@ GET /api/institutions?role=domestic&q=기관
 `skip_reason` 값: `insufficient_history`(과거 k년 부족), `zero_std`(기준선 표준편차 0),
 `missing_share`(비중 결측), `below_min_count`(최소 건수 미만), `prev_zero`(전년 0건).
 
-## GET `/api/scenarios`
+## GET `/api/overview`
 
-주입 시나리오 목록과 정답 건수.
+국가·분야·연도별 협력 집계와 탐지 건수. **개요 히트맵 뷰용.**
+
+| 쿼리 | 기본값 | 설명 |
+|---|---|---|
+| `field`, `year`, `country` | — | 분야 코드 · 연도 · 해외 기관의 국가 코드 |
+| `limit` | 500 | 최대 1000 |
+| `source`, `detector`, `threshold`, `k`, `min_count` | — | 탐지 건수를 셀 조건. `/api/detections` 와 같음 |
 
 ```json
 {
-  "data_version": "example-2026-11-08",
-  "total": 1, "count": 1,
-  "items": [ { "scenario_id": "example", "injected_rows": 5, "year_min": 2021, "year_max": 2025 } ]
+  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "source": "live",
+  "params": [ { "detector": "zscore", "threshold": 2.5, "k": 3, "min_count": 3 } ],
+  "summary": { "evaluated_rows": 9010, "skipped": { "below_min_count": 4344 } },
+  "fields": ["bio"], "years": [2021],
+  "total": 42, "count": 2,
+  "items": [
+    { "country_code": "US", "field": "bio", "year": 2021,
+      "collab_count": 561, "international_total": 166,
+      "share": 3.3795, "composition": 0.3435,
+      "pairs": 306, "domestic_institutions": 21, "foreign_institutions": 132,
+      "detections": 33 }
+  ]
 }
 ```
+
+### 두 가지 비중
+
+| 열 | 분모 | 범위 |
+|---|---|---|
+| `share` | 같은 분야·연도에서 **국내 기관의 국제 공동논문 총수 합** (기관 중복 없음) | **1 을 넘을 수 있음** |
+| `composition` | 같은 분야·연도의 **모든 나라 건수 합** | 나라별 합이 정확히 1 |
+
+한 논문에 같은 나라의 기관이 여럿 참여하면 기관 쌍은 여럿 생기지만 국제 공동논문
+총수로는 한 편입니다. 그래서 `share` 가 1 을 넘습니다(위 예에서 3.38). 히트맵의
+색은 **`composition`** 을 쓰고 `share` 는 숫자로 함께 보여 주는 것을 권합니다.
+
+- `collab_count` 가 0 인 기관 쌍·연도는 빠집니다.
+- `country` 로 걸러도 분모는 전체 기준이라, 한 나라만 조회해도 값이 달라지지 않습니다.
+- `institutions_foreign.csv` 가 없으면 `country_code` 가 `null` 인 한 칸으로 묶입니다.
+
+## GET `/api/metrics`
+
+주입 실험의 정량 평가표. `experiments.evaluate` 가 만든 `metrics.csv` 를 돌려줍니다.
+그 파일이 없는 데이터에서는 **409 `metrics_unavailable`** 입니다.
+
+| 쿼리 | 기본값 | 설명 |
+|---|---|---|
+| `scenario_id` | — | `original`, `step_x2/x3/x5`, `gradual_x3`, `spike_x5`, `decoy_x3` |
+| `detector`, `threshold`, `k`, `min_count`, `correction_id` | — | 실험 조건 |
+| `sort` | `f1` | 내림차순 정렬에 쓸 열 이름. 없는 열이면 400 |
+| `limit` | 100 | 최대 1000 |
+
+```json
+{
+  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "sort": "f1",
+  "scenarios": ["decoy_x3", "gradual_x3", "original", "spike_x5", "step_x2", "step_x3", "step_x5"],
+  "detectors": ["growth", "zscore"],
+  "total": 7, "count": 7,
+  "items": [
+    { "scenario_id": "spike_x5", "detector": "zscore", "threshold": 2.5,
+      "k": 3, "min_count": 3, "correction_id": "none",
+      "tp": 3, "fp": 579, "fn": 17,
+      "precision": 0.0052, "recall": 0.15, "f1": 0.0100,
+      "recall_effective": 0.1579, "delay_mean": 0.0,
+      "missed_pairs": 17, "decoy_fp": 0 }
+  ]
+}
+```
+
+| 열 | 의미 |
+|---|---|
+| `tp` / `fp` / `fn` | 정탐 · 오탐 · 미탐 행 수 |
+| `precision` / `recall` / `f1` | 정답이 없는 `original` 과 `decoy_x3` 에서는 `null` 또는 0 |
+| `recall_effective` | 배수를 적용해도 값이 바뀌지 않은 행(`effective=False`)을 뺀 recall |
+| `delay_mean` | 주입 시작 연도와 첫 탐지 연도의 차이, 평균 |
+| `missed_pairs` | 한 해도 탐지되지 않은 기관 쌍 수 |
+| **`decoy_fp`** | **미끼 시나리오의 오탐 수. 목표는 0** |
+
+## GET `/api/scenarios`
+
+주입 시나리오 목록. 정답 행이 없는 `original` 과 `decoy_x3` 도 **빠뜨리지 않습니다** —
+미끼는 「탐지되면 안 되는」 실험이라 화면에 반드시 보여야 합니다.
+
+```json
+{
+  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "total": 7, "count": 7,
+  "items": [
+    { "scenario_id": "decoy_x3", "injected_rows": 0, "effective_rows": 0, "pairs": 0,
+      "injection_type": null, "multiplier": null, "year_min": null, "year_max": null },
+    { "scenario_id": "step_x5", "injected_rows": 100, "effective_rows": 80, "pairs": 20,
+      "injection_type": "step", "multiplier": 5.0, "year_min": 2021, "year_max": 2025 }
+  ]
+}
+```
+
+`injected_rows` 는 정답 행 수(20 쌍 × 5 년), `effective_rows` 는 그중 **배수를 적용한
+뒤 실제로 값이 바뀐** 행 수입니다. 원본이 0 편인 해는 배수를 곱해도 0 편이라
+`effective=False` 이고, 그 차이가 `recall` 과 `recall_effective` 의 차이로 이어집니다.
 
 ---
 
@@ -313,10 +405,8 @@ GET /api/institutions?role=domestic&q=기관
 
 | 메서드 | 경로 | 목적 | 예정 |
 |---|---|---|---|
-| GET | `/api/overview` | 국가·분야·연도별 히트맵 집계 | 11/12~11/18 |
 | POST | `/api/whatif` | 임계값·k·최소 건수 변경 시 재계산과 지표 | 11/19~11/25 |
 | GET | `/api/comparison` | 보정 전후 비교 | 11/19~11/25 |
-| GET | `/api/metrics` | Precision·Recall·F1·탐지 지연 | `experiments.evaluate` 연결, 11/19~11/25 |
 
 ## 현재 한계
 
