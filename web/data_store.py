@@ -149,6 +149,13 @@ class DataStore:
         else:
             self._foreign_name = dict(zip(self.foreign["foreign_id"], self.foreign["name"]))
             self._foreign_country = dict(zip(self.foreign["foreign_id"], self.foreign["country_code"]))
+        self.country_totals = _read_csv(
+            directory / "country_overview.csv", required=False,
+            columns=("country_code", "field", "year", "collab_count", "international_total", "share"),
+        )
+        _numeric_columns(self.country_totals, "country_overview.csv", (
+            "year", "collab_count", "international_total", "share",
+        ))
 
     # ------------------------------------------------------------------ 메타
 
@@ -344,9 +351,8 @@ class DataStore:
     def overview(self, field=None, year=None, country=None):
         """국가·분야·연도별 집계. 개요 히트맵용.
 
-        share 의 분모는 같은 분야·연도에서 국내 기관의 국제 공동논문 총수를 기관 중복 없이
-        더한 값이다. 한 논문에 같은 나라의 기관이 여럿 참여할 수 있어 1 을 넘을 수 있으므로,
-        나라별 합이 1 이 되는 composition 을 함께 돌려준다.
+        국가 고유 논문 표가 있으면 해당 집계와 분모를 사용한다.
+        구형 데이터는 기관 쌍 집계를 사용하며 API에 집계 기준을 표시한다.
         """
         base = self.shares
         if field:
@@ -361,13 +367,24 @@ class DataStore:
             foreign_institutions=("foreign_id", "nunique"),
             domestic_institutions=("domestic_id", "nunique"),
         )
-        totals = (
-            base.drop_duplicates(["domestic_id", "field", "year"])
-            .groupby(["field", "year"], as_index=False)["international_total"].sum()
-        )
-        merged = grouped.merge(totals, on=["field", "year"], how="left")
-        denominator = merged["international_total"].where(merged["international_total"] > 0)
-        merged["share"] = merged["collab_count"] / denominator
+        if not self.country_totals.empty:
+            country_rows = self.country_totals[self.country_totals["collab_count"] > 0]
+            if field:
+                country_rows = country_rows[country_rows["field"] == field]
+            if year is not None:
+                country_rows = country_rows[country_rows["year"] == year]
+            sizes = grouped.drop(columns="collab_count")
+            merged = country_rows.merge(sizes, on=["country_code", "field", "year"], how="left")
+            columns = ["pairs", "foreign_institutions", "domestic_institutions"]
+            merged[columns] = merged[columns].fillna(0).astype(int)
+        else:
+            totals = (
+                base.drop_duplicates(["domestic_id", "field", "year"])
+                .groupby(["field", "year"], as_index=False)["international_total"].sum()
+            )
+            merged = grouped.merge(totals, on=["field", "year"], how="left")
+            denominator = merged["international_total"].where(merged["international_total"] > 0)
+            merged["share"] = merged["collab_count"] / denominator
 
         per_cell = merged.groupby(["field", "year"])["collab_count"].transform("sum")
         merged["composition"] = merged["collab_count"] / per_cell.where(per_cell > 0)

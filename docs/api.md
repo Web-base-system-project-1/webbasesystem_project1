@@ -297,51 +297,43 @@ GET /api/institutions?role=domestic&q=기관
 
 ## GET `/api/overview`
 
-국가·분야·연도별 협력 집계와 탐지 건수. **개요 히트맵 뷰용.**
+국가·분야·연도별 협력 집계와 탐지 건수를 반환합니다.
 
 | 쿼리 | 기본값 | 설명 |
 |---|---|---|
-| `field`, `year`, `country` | — | 분야 코드 · 연도 · 해외 기관의 국가 코드 |
+| `field`, `year`, `country` | — | 분야 코드, 연도, 해외 국가 코드 |
 | `limit` | 500 | 최대 1000 |
-| `source`, `detector`, `threshold`, `k`, `min_count` | — | 탐지 건수를 셀 조건. `/api/detections` 와 같음 |
+| `source`, `detector`, `threshold`, `k`, `min_count` | — | 탐지 건수를 셀 조건. `/api/detections`와 동일 |
+
+기본 v2의 `country_overview.csv`는 같은 논문·국가와 여러 국내 기관의 중복을 제거합니다. 분모는 같은 분야·연도의 고유 국제 공동논문 총수입니다. 각 국가의 `share`는 0~1이며, 여러 국가가 한 논문에 참여하면 국가별 비중의 합은 1을 넘을 수 있습니다. `composition`은 각 나라 건수를 모든 나라 건수의 합으로 나눠 합계 1로 정규화한 값입니다.
+
+국가 집계 파일이 있는 응답의 `aggregation_basis`는 `unique_country_papers`입니다. 구형 데이터의 기관 쌍 합산 방식은 `institution_pairs`로 표시하며, 이 경우 `share`가 1을 넘을 수 있습니다. 국가 필터는 비중 계산 후 적용하므로 분모가 바뀌지 않습니다.
+
+아래는 `/api/overview?field=bio&year=2021&country=US&detector=zscore&threshold=2.5`의 집계 부분입니다.
 
 ```json
 {
-  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
+  "aggregation_basis": "unique_country_papers",
   "source": "live",
-  "params": [ { "detector": "zscore", "threshold": 2.5, "k": 3, "min_count": 3 } ],
-  "summary": { "evaluated_rows": 9010, "skipped": { "below_min_count": 4344 } },
-  "fields": ["bio"], "years": [2021],
-  "total": 42, "count": 2,
-  "items": [
-    { "country_code": "US", "field": "bio", "year": 2021,
-      "collab_count": 561, "international_total": 166,
-      "share": 3.3795, "composition": 0.3435,
-      "pairs": 306, "domestic_institutions": 21, "foreign_institutions": 132,
-      "detections": 33 }
-  ]
+  "total": 1,
+  "count": 1,
+  "items": [{
+    "country_code": "US", "field": "bio", "year": 2021,
+    "collab_count": 94, "international_total": 110,
+    "share": 0.8545454545454545, "composition": 0.20434782608695654,
+    "pairs": 306, "domestic_institutions": 21,
+    "foreign_institutions": 132, "detections": 16
+  }]
 }
 ```
 
-### 두 가지 비중
-
-| 열 | 분모 | 범위 |
-|---|---|---|
-| `share` | 같은 분야·연도에서 **국내 기관의 국제 공동논문 총수 합** (기관 중복 없음) | **1 을 넘을 수 있음** |
-| `composition` | 같은 분야·연도의 **모든 나라 건수 합** | 나라별 합이 정확히 1 |
-
-한 논문에 같은 나라의 기관이 여럿 참여하면 기관 쌍은 여럿 생기지만 국제 공동논문
-총수로는 한 편입니다. 그래서 `share` 가 1 을 넘습니다(위 예에서 3.38). 히트맵의
-색은 **`composition`** 을 쓰고 `share` 는 숫자로 함께 보여 주는 것을 권합니다.
-
-- `collab_count` 가 0 인 기관 쌍·연도는 빠집니다.
-- `country` 로 걸러도 분모는 전체 기준이라, 한 나라만 조회해도 값이 달라지지 않습니다.
-- `institutions_foreign.csv` 가 없으면 `country_code` 가 `null` 인 한 칸으로 묶입니다.
+공동논문 0건인 국가·연도는 목록에서 생략합니다. 탐지 건수는 쿼리 조건에 맞는 기관 쌍의 탐지 행 수이며, 국가 집계는 원본 데이터에 대한 값입니다.
 
 ## GET `/api/metrics`
 
 주입 실험의 정량 평가표. `experiments.evaluate` 가 만든 `metrics.csv` 를 돌려줍니다.
-그 파일이 없는 데이터에서는 **409 `metrics_unavailable`** 입니다.
+그 파일이 없는 데이터에서는 **409 `metrics_unavailable`** 입니다. v2는 보정 전후 84개 실행을 포함하며 `correction_id=none`으로 보정 전 실행을 선택할 수 있습니다.
 
 | 쿼리 | 기본값 | 설명 |
 |---|---|---|
@@ -352,7 +344,7 @@ GET /api/institutions?role=domestic&q=기관
 
 ```json
 {
-  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
   "sort": "f1",
   "scenarios": ["decoy_x3", "gradual_x3", "original", "spike_x5", "step_x2", "step_x3", "step_x5"],
   "detectors": ["growth", "zscore"],
@@ -384,7 +376,7 @@ GET /api/institutions?role=domestic&q=기관
 
 ```json
 {
-  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
   "total": 7, "count": 7,
   "items": [
     { "scenario_id": "decoy_x3", "injected_rows": 0, "effective_rows": 0, "pairs": 0,

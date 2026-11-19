@@ -413,7 +413,7 @@ def test_metrics_reads_the_experiment_table(monkeypatch):
     monkeypatch.setattr(dataset_source, "dotenv_values", lambda _: {})
     monkeypatch.setattr(data_store, "_store", None)
     with app.test_client() as client:
-        body = strict_json(client.get("/api/metrics?detector=zscore&threshold=2.5"))
+        body = strict_json(client.get("/api/metrics?detector=zscore&threshold=2.5&correction_id=none"))
         assert "decoy_x3" in body["scenarios"] and body["detectors"] == ["growth", "zscore"]
         assert body["total"] == len(body["items"]) == 7
         for row in body["items"]:
@@ -427,3 +427,33 @@ def test_metrics_reads_the_experiment_table(monkeypatch):
         assert decoy["decoy_fp"] is not None, "미끼 오탐 수는 항상 실려야 한다"
 
         assert client.get("/api/metrics?sort=nope").status_code == 400
+
+
+def test_default_country_overview_matches_deduplicated_csv(monkeypatch):
+    import pandas as pd
+    from pipeline.dataset import dataset_path, open_dataset
+    monkeypatch.delenv("DATA_DIR", raising=False)
+    monkeypatch.setattr(dataset_source, "dotenv_values", lambda _: {})
+    monkeypatch.setattr(data_store, "_store", None)
+    with open_dataset(dataset_path()) as directory:
+        with (directory / "country_overview.csv").open("rb") as handle:
+            expected = pd.read_csv(handle)
+    expected = expected[(expected["field"] == "bio") & (expected["year"] == 2021) & (expected["collab_count"] > 0)]
+    with app.test_client() as client:
+        body = strict_json(client.get("/api/overview?field=bio&year=2021&limit=1000"))
+        assert body["aggregation_basis"] == "unique_country_papers"
+        assert len(body["items"]) == len(expected)
+        for item in body["items"]:
+            row = expected[expected["country_code"] == item["country_code"]].iloc[0]
+            assert item["collab_count"] == row["collab_count"]
+            assert item["international_total"] == row["international_total"]
+            assert item["share"] == pytest.approx(row["share"])
+            assert 0 <= item["share"] <= 1
+        one = strict_json(client.get("/api/overview?field=bio&year=2021&country=US"))
+        assert one["items"] == [row for row in body["items"] if row["country_code"] == "US"]
+        all_metrics = strict_json(client.get("/api/metrics"))
+        assert all_metrics["total"] == 84
+        corrected = strict_json(client.get(
+            "/api/metrics?detector=zscore&threshold=2.5&correction_id=min_international_total_3"
+        ))
+        assert corrected["total"] == 7

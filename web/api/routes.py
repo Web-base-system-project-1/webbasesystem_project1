@@ -362,7 +362,7 @@ def overview():
         if country:
             tagged = tagged[tagged["country_code"] == country]
         grouped = tagged.groupby(["country_code", "field", "year"], dropna=False).size()
-        counts = {(c, f, int(y)): int(n) for (c, f, y), n in grouped.items()}
+        counts = {(None if pd.isna(c) else c, f, int(y)): int(n) for (c, f, y), n in grouped.items()}
 
     items = [{**row, "detections": counts.get(
         (row["country_code"], row["field"], row["year"]), 0)}
@@ -370,6 +370,7 @@ def overview():
 
     return envelope(
         store, source=source, params=params, summary=summary,
+        aggregation_basis="unique_country_papers" if not store.country_totals.empty else "institution_pairs",
         fields=sorted(frame["field"].unique().tolist()),
         years=sorted(int(y) for y in frame["year"].unique()),
         total=len(frame), count=len(items), items=items,
