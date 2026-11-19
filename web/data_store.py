@@ -1,7 +1,7 @@
 """서버가 켜질 때 한 번만 CSV를 읽어 메모리에 들고 있는다.
 
 요청마다 파일을 다시 읽지 않는다. DATA_DIR로 집계 폴더나 ZIP을 지정할 수 있다.
-기본값은 Git으로 공유하는 2015~2025년 데이터 v1 ZIP이다.
+기본값은 Git으로 공유하는 2015~2025년 데이터 v2 ZIP이다.
 """
 
 from collections import OrderedDict

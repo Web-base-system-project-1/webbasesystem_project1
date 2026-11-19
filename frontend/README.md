@@ -50,7 +50,7 @@ API 원본 명세: ../docs/api.md
 | /api/timeline?domestic_id=...&foreign_id=...&field=... | 연도별 공동논문 수와 비중 |
 
 주의 사항:
-- 기본 데이터는 2015~2025년 실제 집계 v1입니다.
+- 기본 데이터는 2015~2025년 실제 집계 v2입니다.
 - 분야 선택지는 /api/meta의 fields에서 받습니다.
 - share는 0~1이며, null은 0과 다르게 처리합니다.
 - 여러 응답의 data_version을 확인해 같은 데이터인지 판단합니다.

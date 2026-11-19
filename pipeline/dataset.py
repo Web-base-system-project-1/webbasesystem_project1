@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 
 from pipeline._files import PROJECT_ROOT, project_path
 
-DEFAULT_DATASET = "data/sample/actual/four_fields_2015_2025_v1.zip"
+DEFAULT_DATASET = "data/sample/actual/four_fields_2015_2025_v2.zip"
 
 
 def dataset_path(value=None):
