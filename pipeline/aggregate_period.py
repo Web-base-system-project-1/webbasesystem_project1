@@ -22,6 +22,13 @@ BASELINE_COLUMNS = (
 )
 COVERAGE_COLUMNS = ("field", "topic_id", "year", "status", "api_count", "collected_works", "duplicates")
 FOREIGN_COLUMNS = ("foreign_id", "name", "country_code")
+COUNTRY_KEYS = ("domestic_id", "country_code", "field", "year")
+COUNTRY_COLUMNS = {
+    "country_contributions.csv": ("work_id", *COUNTRY_KEYS),
+    "country_counts.csv": (*COUNTRY_KEYS, "collab_count"),
+    "country_shares.csv": (*COUNTRY_KEYS, "collab_count", "international_total", "share"),
+    "country_overview.csv": ("country_code", "field", "year", "collab_count", "international_total", "share"),
+}
 AUDIT_PERIOD_COLUMNS = ("field", "topic_id", "year", *AUDIT_COLUMNS, "period_status", "period_reason")
 
 
@@ -129,6 +136,56 @@ def foreign_institutions(works):
     return [registry[key] for key in sorted(registry)]
 
 
+def aggregate_countries(works, artifacts):
+    contributions = {
+        (work["work_id"], domestic["id"], country, work["field"], work["year"])
+        for work in works
+        for domestic in work["domestic_institutions"]
+        for country in {institution["country_code"] for institution in work["foreign_institutions"]}
+    }
+    counts = Counter(row[1:] for row in contributions)
+    totals = {
+        (row["domestic_id"], row["field"], row["year"]): row["international_total"]
+        for row in artifacts["kr_totals.csv"]
+    }
+    shares = []
+    for domestic_id, country, field in sorted({key[:-1] for key in counts}):
+        for year in YEARS:
+            count = counts[(domestic_id, country, field, year)]
+            total = totals.get((domestic_id, field, year), 0)
+            shares.append({
+                "domestic_id": domestic_id, "country_code": country, "field": field,
+                "year": year, "collab_count": count, "international_total": total,
+                "share": count / total if total else None,
+            })
+
+    # A paper with two domestic institutions contributes once to the national view.
+    national = {(work_id, country, field, year) for work_id, _, country, field, year in contributions}
+    national_counts = Counter(row[1:] for row in national)
+    national_totals = Counter((work["field"], work["year"]) for work in works)
+    overview = []
+    for country, field in sorted({key[:-1] for key in national_counts}):
+        for year in YEARS:
+            count = national_counts[(country, field, year)]
+            total = national_totals[(field, year)]
+            overview.append({
+                "country_code": country, "field": field, "year": year,
+                "collab_count": count, "international_total": total,
+                "share": count / total if total else None,
+            })
+    return {
+        "country_contributions.csv": [
+            dict(zip(("work_id", *COUNTRY_KEYS), row)) for row in sorted(contributions)
+        ],
+        "country_counts.csv": [
+            {**dict(zip(COUNTRY_KEYS, key)), "collab_count": count}
+            for key, count in sorted(counts.items())
+        ],
+        "country_shares.csv": shares,
+        "country_overview.csv": overview,
+    }
+
+
 def aggregate_period(input_dir, output_dir, *, include_healthcare=False):
     source = load_coverage(input_dir)
     preliminary, audit, coverage = preprocess_period(
@@ -136,6 +193,7 @@ def aggregate_period(input_dir, output_dir, *, include_healthcare=False):
     )
     works = filter_domestic_institutions(preliminary, audit)
     artifacts, summary, review = aggregate_records(works)
+    artifacts.update(aggregate_countries(works, artifacts))
     series, baselines, candidates = build_series(artifacts)
     artifacts.update({
         "collab_shares.csv": series,
@@ -145,7 +203,7 @@ def aggregate_period(input_dir, output_dir, *, include_healthcare=False):
         "preprocess_audit.csv": audit,
     })
     columns = {
-        **CSV_COLUMNS, "institutions_foreign.csv": FOREIGN_COLUMNS,
+        **CSV_COLUMNS, **COUNTRY_COLUMNS, "institutions_foreign.csv": FOREIGN_COLUMNS,
         "collection_coverage.csv": COVERAGE_COLUMNS, "injection_candidates.csv": BASELINE_COLUMNS,
         "preprocess_audit.csv": AUDIT_PERIOD_COLUMNS,
     }
@@ -166,12 +224,17 @@ def aggregate_period(input_dir, output_dir, *, include_healthcare=False):
                 row["period_reason"] for row in audit if row["period_status"] == "excluded"
             ).items())),
             "distinct_pair_fields": len(baselines), "timeline_rows": len(series),
+            "country_contributions": len(artifacts["country_contributions.csv"]),
+            "country_rows": len(artifacts["country_counts.csv"]),
+            "foreign_countries": len({row["country_code"] for row in artifacts["country_counts.csv"]}),
         },
         "rules": {
             "domestic_types": sorted(domestic_types),
             "min_domestic_period_works": MIN_DOMESTIC_WORKS, "max_unique_institutions_per_work": 50,
             "identity": "exact_openalex_id_no_ror_or_lineage_merging",
             "zero_years": "filled only after all configured topic and year queries are complete",
+            "country_counts": "unique work, domestic institution, country, field, year",
+            "country_overview": "unique work, country, field, year",
         },
         "injection_eligibility": {
             "baseline_years": list(BASELINE_YEARS), "minimum_mean": MIN_BASELINE_MEAN,

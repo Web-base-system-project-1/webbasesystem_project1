@@ -28,6 +28,10 @@
 | `collab_shares.csv` | domestic_id, foreign_id, field, year, collab_count, international_total, share |
 | `pair_contributions.csv` | work_id, domestic_id, foreign_id, field, year |
 | `total_contributions.csv` | work_id, domestic_id, field, year |
+| `country_contributions.csv` | work_id, domestic_id, country_code, field, year |
+| `country_counts.csv` | domestic_id, country_code, field, year, collab_count |
+| `country_shares.csv` | domestic_id, country_code, field, year, collab_count, international_total, share |
+| `country_overview.csv` | country_code, field, year, collab_count, international_total, share |
 | `collection_log.csv` | request_id, collected_at, query, response_count, status |
 | `injections.csv` | scenario_id, domestic_id, foreign_id, field, year |
 | `detections.csv` | run_id, scenario_id, domestic_id, foreign_id, field, year, detector, threshold, correction_id, score |
@@ -39,3 +43,5 @@
 한 논문이 KAIST·MIT·Stanford의 공동연구라면 KAIST–MIT와 KAIST–Stanford는 각각 1건이지만, KAIST 국제 공동논문 총수는 1편입니다. 국제 공동논문 총수를 기관 쌍의 건수 합으로 계산하지 않습니다.
 
 탐지 결과에는 기준 평균·표준편차, 현재 값, 최소 건수, 처리 사유 등 근거 열을 추가합니다. 실험별 파라미터와 시드는 별도 설정에 보존하고, 탐지기·임계값·보정 버전을 구분해서 평가합니다.
+
+국가 집계는 같은 논문·국내 기관·국가를 한 번만 셉니다. `country_overview.csv`는 여러 국내 기관의 중복도 제거하고, 같은 분야·연도의 고유 국제 공동논문 수를 분모로 사용합니다. 국가별 비중은 각각 0~1이며 여러 국가가 한 논문에 참여하면 국가별 비중의 합은 1을 넘을 수 있습니다. 원본 대조, 기관 매핑과 오탐·미탐 사례는 [11/19 데이터 v2 검증](data-review-2026-11-19.md)에 있습니다.

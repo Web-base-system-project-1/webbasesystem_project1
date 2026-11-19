@@ -36,11 +36,11 @@ React는 상대 경로 `/api/...`를 사용합니다. 개발 중 Vite(5173)의 �
 ## 데이터 출처
 
 서버는 첫 데이터 요청에서 CSV를 한 번 읽고 메모리에서 재사용합니다.
-기본값은 [데이터 v1 ZIP](../data/sample/actual/four_fields_2015_2025_v1.zip)입니다.
+기본값은 [데이터 v2 ZIP](../data/sample/actual/four_fields_2015_2025_v2.zip)입니다.
 다른 집계 폴더나 같은 구조의 ZIP을 사용하려면 `.env`의 `DATA_DIR`을 지정합니다.
 
 ```dotenv
-DATA_DIR=data/processed/four_fields_2015_2025_v1
+DATA_DIR=data/processed/four_fields_2015_2025_v2
 ```
 
 지금 사용하는 데이터는 `/api/meta`의 `data_version`과 `is_real_data`로 확인합니다.
@@ -64,16 +64,16 @@ DATA_DIR=data/processed/four_fields_2015_2025_v1
 
 ```json
 {
-  "data_version": "openalex-four-fields-2015-2025-afe152387c5d",
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
   "data_scope": "period_pilot",
   "is_real_data": true,
-  "data_dir": "four_fields_2015_2025_v1",
+  "data_dir": "four_fields_2015_2025_v2",
   "fields": ["ai", "bio", "quantum", "semiconductor"],
   "years": { "min": 2015, "max": 2025 },
   "detectors": ["growth", "zscore"],
   "counts": {
     "rows": 80564, "domestic_institutions": 78, "foreign_institutions": 2660,
-    "pairs": 7324, "detections": 19790, "injections": 420
+    "pairs": 7324, "detections": 37869, "injections": 420
   }
 }
 ```
@@ -314,7 +314,7 @@ GET /api/institutions?role=domestic&q=기관
 ## 현재 한계
 
 - 2025년 샘플의 실시간 탐지는 과거 기준선 부족으로 0건입니다.
-  여러 연도의 실시간 탐지는 [데이터 v1](period-v1.md)에서 확인할 수 있습니다.
-- 데이터 v1의 저장된 시나리오는 `source=file`과 `scenario_id`로 조회합니다.
+  여러 연도의 실시간 탐지는 [데이터 v2](data-review-2026-11-19.md)에서 확인할 수 있습니다.
+- 데이터 v2의 저장된 시나리오는 `source=file`과 `scenario_id`로 조회합니다.
 - 네 분야 샘플과 기간 집계에는 `institutions_foreign.csv`가 있습니다.
   구형 데이터 폴더에서 이 파일이 없으면 API는 해외 기관 이름에 ID를, 국가에 `null`을 반환합니다.
