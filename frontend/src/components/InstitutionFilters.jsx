@@ -1,3 +1,4 @@
+import InstitutionSearch from './InstitutionSearch'
 const fields = {
   ai: 'AI',
   bio: '바이오',
@@ -5,42 +6,50 @@ const fields = {
   quantum: '양자',
 }
 
-export default function InstitutionFilters({ catalog, selection, onChange }) {
+export default function InstitutionFilters({
+  catalog,
+  selection,
+  onChange,
+  pair,
+}) {
   return (
     <section className="filters" aria-label="조회 조건">
-      <label>
-        국내 기관
-        <select
-          name="domestic_id"
-          value={selection.domestic_id}
-          onChange={onChange}
-          disabled={!catalog}
-        >
-          {!catalog?.domestic.length && <option value="">기관 없음</option>}
-          {catalog?.domestic.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        해외 기관
-        <select
-          name="foreign_id"
-          value={selection.foreign_id}
-          onChange={onChange}
-          disabled={!catalog}
-        >
-          {!catalog?.foreign.length && <option value="">기관 없음</option>}
-          {catalog?.foreign.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-              {item.country_code ? ` (${item.country_code})` : ''}
-            </option>
-          ))}
-        </select>
-      </label>
+      {catalog && (
+        <>
+          <InstitutionSearch
+            role="domestic"
+            field={selection.field}
+            relatedId={selection.foreign_id}
+            label="국내 기관"
+            name="domestic_id"
+            value={selection.domestic_id}
+            selectedName={
+              (pair?.domestic_id === selection.domestic_id
+                ? pair.domestic_name
+                : null) ||
+              catalog.domestic.find((i) => i.id === selection.domestic_id)?.name
+            }
+            version={catalog.meta.data_version}
+            onChange={onChange}
+          />
+          <InstitutionSearch
+            role="foreign"
+            field={selection.field}
+            relatedId={selection.domestic_id}
+            label="해외 기관"
+            name="foreign_id"
+            value={selection.foreign_id}
+            selectedName={
+              (pair?.foreign_id === selection.foreign_id
+                ? pair.foreign_name
+                : null) ||
+              catalog.foreign.find((i) => i.id === selection.foreign_id)?.name
+            }
+            version={catalog.meta.data_version}
+            onChange={onChange}
+          />
+        </>
+      )}
       <label className="field-filter">
         분야
         <select

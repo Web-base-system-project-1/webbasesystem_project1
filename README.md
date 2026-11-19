@@ -67,6 +67,7 @@ React 최초 패키지 설치는 `frontend/`에서 `npm ci`로 진행합니다.
 
 ## 문서
 
+- [11/13 프론트 통합·실험 비교 진행](docs/frontend-progress-2026-11-13.md)
 - [11/19 데이터 v2 · 국가 집계·원본·오탐·미탐 검증](docs/data-review-2026-11-19.md) · [집계·보정 실험 ZIP](data/sample/actual/four_fields_2015_2025_v2.zip)
 - [데이터 v1 · 분야 정의·수집 기록](docs/period-v1.md)
 - [11월 11일 기간 파일럿 검증](docs/period-pilot.md) · [파일럿 집계 ZIP](data/sample/actual/four_fields_2015_2025_pilot.zip)

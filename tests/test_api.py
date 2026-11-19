@@ -239,6 +239,32 @@ def test_unknown_source_and_detector_return_400(client):
     assert client.get("/api/detections?detector=nope").status_code == 400
 
 
+def test_institution_search_restricts_partners_before_limit(client, dataset):
+    import pandas as pd
+    shares = pd.read_csv(dataset / 'collab_shares.csv')
+    # AI: KR1-FR1만 양수, KR2-FR2는 0으로 채운 시계열만 존재.
+    shares.loc[shares.field == 'ai', 'collab_count'] = 0
+    shares.loc[(shares.field == 'ai') & (shares.domestic_id == 'EXAMPLE_KR_1') & (shares.foreign_id == 'EXAMPLE_FR_1'), 'collab_count'] = 2
+    shares.to_csv(dataset / 'collab_shares.csv', index=False)
+    foreign = client.get('/api/institutions', query_string={
+        'role': 'foreign', 'field': 'ai', 'domestic_id': 'EXAMPLE_KR_1', 'limit': 1,
+    }).get_json()
+    assert foreign['total'] == 1
+    assert [r['id'] for r in foreign['items']] == ['EXAMPLE_FR_1']
+    domestic = client.get('/api/institutions', query_string={
+        'role': 'domestic', 'field': 'ai', 'foreign_id': 'EXAMPLE_FR_1',
+    }).get_json()
+    assert [r['id'] for r in domestic['items']] == ['EXAMPLE_KR_1']
+    empty = client.get('/api/institutions', query_string={
+        'role': 'foreign', 'field': 'ai', 'domestic_id': 'EXAMPLE_KR_2',
+    }).get_json()
+    assert empty['total'] == 0 and empty['items'] == []
+    assert client.get('/api/institutions', query_string={
+        'role': 'foreign', 'field': 'ai', 'domestic_id': 'EXAMPLE_KR_1', 'q': 'no-match',
+    }).get_json()['total'] == 0
+    assert client.get('/api/institutions?role=foreign').get_json()['total'] == 3
+
+
 PAIR_QUERY = {"domestic_id": "EXAMPLE_KR_1", "foreign_id": "EXAMPLE_FR_1", "field": "ai"}
 
 
