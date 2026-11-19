@@ -83,4 +83,4 @@ python scripts/review_detection_data.py --raw-dir data/raw/four_fields_2015_2025
 python scripts/package_period_data.py --data-dir data/processed/four_fields_2015_2025_v2 --experiments-dir results/weekly_20261119/experiments --review-dir results/weekly_20261119 --output data/sample/actual/four_fields_2015_2025_v2.zip
 ```
 
-집계 출력에는 아직 없는 폴더를 지정합니다. ROR 검토는 당시 API 응답을 보관한 기록이며 이후 기관 정보를 다시 조회하면 조회 일시와 응답 해시를 새로 남겨야 합니다. 국가별 API·화면 연결은 3·4번 담당자가 이어서 진행합니다. 탐지 보정의 최종 채택과 분야별 성능 해석은 2번 담당자가 위 사례와 지표를 바탕으로 결정합니다.
+집계 출력에는 아직 없는 폴더를 지정합니다. ROR 검토는 당시 API 응답을 보관한 기록이며 이후 기관 정보를 다시 조회하면 조회 일시와 응답 해시를 새로 남겨야 합니다. 국가별 집계는 PR 통합 검토에서 `/api/overview`에 연결했습니다. 화면은 4번 담당자가 이어서 연결할 수 있습니다. 탐지 보정의 최종 채택과 분야별 성능 해석은 2번 담당자가 위 사례와 지표를 바탕으로 결정합니다.

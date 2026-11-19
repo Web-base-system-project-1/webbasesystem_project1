@@ -104,7 +104,6 @@ class DataStore:
             columns=("scenario_id", "domestic_id", "foreign_id", "field", "year"),
         )
         _numeric_columns(self.injections, "injections.csv", ("year",))
-
         # 탐지 함수에 넣을 원자료. 둘 다 있어야 패널을 만들 수 있다.
         self.counts = _read_csv(
             directory / "collab_counts.csv", required=False,
@@ -150,6 +149,13 @@ class DataStore:
         else:
             self._foreign_name = dict(zip(self.foreign["foreign_id"], self.foreign["name"]))
             self._foreign_country = dict(zip(self.foreign["foreign_id"], self.foreign["country_code"]))
+        self.country_totals = _read_csv(
+            directory / "country_overview.csv", required=False,
+            columns=("country_code", "field", "year", "collab_count", "international_total", "share"),
+        )
+        _numeric_columns(self.country_totals, "country_overview.csv", (
+            "year", "collab_count", "international_total", "share",
+        ))
 
     # ------------------------------------------------------------------ 메타
 
@@ -337,6 +343,91 @@ class DataStore:
         if min_count is not None:
             grouped = grouped[grouped["total_count"] >= min_count]
         return grouped.sort_values("total_count", ascending=False)
+
+    def with_country(self, frame):
+        """foreign_id 를 해외 기관의 국가 코드로 옮겨 붙인다. 파일이 없으면 전부 None."""
+        return frame.assign(country_code=frame["foreign_id"].map(self._foreign_country))
+
+    def overview(self, field=None, year=None, country=None):
+        """국가·분야·연도별 집계. 개요 히트맵용.
+
+        국가 고유 논문 표가 있으면 해당 집계와 분모를 사용한다.
+        구형 데이터는 기관 쌍 집계를 사용하며 API에 집계 기준을 표시한다.
+        """
+        base = self.shares
+        if field:
+            base = base[base["field"] == field]
+        if year is not None:
+            base = base[base["year"] == year]
+
+        rows = self.with_country(base[base["collab_count"] > 0])
+        grouped = rows.groupby(["country_code", "field", "year"], dropna=False, as_index=False).agg(
+            collab_count=("collab_count", "sum"),
+            pairs=("foreign_id", "size"),
+            foreign_institutions=("foreign_id", "nunique"),
+            domestic_institutions=("domestic_id", "nunique"),
+        )
+        if not self.country_totals.empty:
+            country_rows = self.country_totals[self.country_totals["collab_count"] > 0]
+            if field:
+                country_rows = country_rows[country_rows["field"] == field]
+            if year is not None:
+                country_rows = country_rows[country_rows["year"] == year]
+            sizes = grouped.drop(columns="collab_count")
+            merged = country_rows.merge(sizes, on=["country_code", "field", "year"], how="left")
+            columns = ["pairs", "foreign_institutions", "domestic_institutions"]
+            merged[columns] = merged[columns].fillna(0).astype(int)
+        else:
+            totals = (
+                base.drop_duplicates(["domestic_id", "field", "year"])
+                .groupby(["field", "year"], as_index=False)["international_total"].sum()
+            )
+            merged = grouped.merge(totals, on=["field", "year"], how="left")
+            denominator = merged["international_total"].where(merged["international_total"] > 0)
+            merged["share"] = merged["collab_count"] / denominator
+
+        per_cell = merged.groupby(["field", "year"])["collab_count"].transform("sum")
+        merged["composition"] = merged["collab_count"] / per_cell.where(per_cell > 0)
+
+        if country:
+            merged = merged[merged["country_code"] == country]
+        return merged.sort_values(
+            ["field", "year", "collab_count"], ascending=[True, True, False], ignore_index=True)
+
+    def scenario_summary(self):
+        """시나리오 목록. 주입 정답이 없는 original·decoy 도 빠뜨리지 않는다.
+
+        미끼(decoy) 시나리오는 정답 행이 0 이지만 「탐지되면 안 되는」 실험이라
+        화면에서 반드시 보여야 한다.
+        """
+        names = set()
+        for frame, column in ((self.injections, "scenario_id"),
+                              (self.metrics, "scenario_id"),
+                              (self.detections, "scenario_id")):
+            if not frame.empty and column in frame.columns:
+                names.update(frame[column].dropna().unique().tolist())
+        if not names:
+            return pd.DataFrame()
+
+        rows = []
+        for name in sorted(names):
+            row = {"scenario_id": name, "injected_rows": 0, "pairs": 0,
+                   "effective_rows": 0, "injection_type": None, "multiplier": None,
+                   "year_min": None, "year_max": None}
+            part = (self.injections[self.injections["scenario_id"] == name]
+                    if not self.injections.empty else pd.DataFrame())
+            if len(part):
+                row["injected_rows"] = int(len(part))
+                row["pairs"] = int(len(part[["domestic_id", "foreign_id", "field"]].drop_duplicates()))
+                row["year_min"] = int(part["year"].min())
+                row["year_max"] = int(part["year"].max())
+                if "effective" in part.columns:
+                    row["effective_rows"] = int(part["effective"].sum())
+                for key in ("injection_type", "multiplier"):
+                    if key in part.columns:
+                        row[key] = part[key].iloc[0]
+            rows.append(row)
+        return pd.DataFrame(rows,dtype=object)
 
     def timeline(self, domestic_id, foreign_id, field):
         keys = (
