@@ -200,6 +200,8 @@ z-score 보정은 해당 연도의 전체 국제 공동논문이 3편 미만인 
 
 지속 증가 시나리오별 정답 100행 중 원래 0편인 20행은 배수를 곱한 뒤에도 0편이다. 공통 조건에 따른 Recall과 더불어 실제 편수가 변한 80행의 유효 Recall을 표에 함께 제시했다. 선정 기관 쌍은 바이오와 반도체에 집중되어 있어 다른 분야의 성능은 이번 실험으로 확인할 수 없다.
 
-프로젝트 루트에서 `python -m experiments.run`을 실행하면 v1 ZIP을 자동으로 읽어 `results/run/`에 `injections.csv`, `detections.csv`, `metrics.csv`를 생성한다. 이 보고서는 PR #10 커밋 `8fc5e27`에서 재생성한 결과를 사용했다. 해당 커밋의 탐지기·실험 코드와 v1 입력은 병합된 main 커밋 `1c3de4d`와 동일하다. 84회 모두의 TP·FP·FN을 원본 CSV의 키 집합으로 다시 계산해 평가표와 대조했다.
+이 보고서는 PR #10 커밋 `8fc5e27`에서 v1 입력으로 재생성한 결과를 사용했다. 해당 커밋의 탐지기·실험 코드와 v1 입력은 병합된 main 커밋 `1c3de4d`와 동일하다. 84회 모두의 TP·FP·FN을 원본 CSV의 키 집합으로 다시 계산해 평가표와 대조했다.
+
+현재 `python -m experiments.run`의 기본 입력은 국가 집계를 추가한 v2 ZIP이다. v1과 기관 쌍·분모 입력이 같으며, 통합 검토에서 위 84행의 TP·FP·FN과 비율·지연을 v2의 저장된 평가표와 대조했다. v1으로 재현하려면 `.env`에 `DATA_DIR=data/sample/actual/four_fields_2015_2025_v1.zip`을 지정한 뒤 실행한다. 결과는 `results/run/`에 생성된다.
 
 [프로젝트 명세서](https://chatgpt.com/library?file_id=libfile_14ea6d2473ec81918e95d3d79ddb709d\&account_id=personal) · [v1 데이터 문서](https://github.com/Web-base-system-project-1/webbasesystem_project1/blob/main/docs/period-v1.md) · [보정 실험 PR #9](https://github.com/Web-base-system-project-1/webbasesystem_project1/pull/9)
