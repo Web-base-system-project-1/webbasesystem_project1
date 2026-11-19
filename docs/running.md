@@ -43,8 +43,8 @@ cd ..
 
 `node_modules`와 `.venv`는 각자 생성하며 Git에 올리지 않습니다.
 `package-lock.json`이 바뀌면 `frontend/`에서 `npm ci`를 다시 실행합니다.
-저장소의 데이터 v1 ZIP으로 화면을 실행할 때는 OpenAlex API 키가 필요 없습니다.
-기존 `.env`의 `DATA_DIR`에 다른 데이터 경로가 있으면 그 경로가 우선합니다. 기본 데이터 v1을 사용하려면 해당 값을 비우고 Flask를 다시 시작하세요.
+저장소의 데이터 v2 ZIP으로 화면을 실행할 때는 OpenAlex API 키가 필요 없습니다.
+기존 `.env`의 `DATA_DIR`에 다른 데이터 경로가 있으면 그 경로가 우선합니다. 기본 데이터 v2을 사용하려면 해당 값을 비우고 Flask를 다시 시작하세요.
 
 ## 3. 매번 실행 — 터미널 두 개
 
