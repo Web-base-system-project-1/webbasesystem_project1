@@ -65,3 +65,27 @@ footer { margin-top: 24px; color: #7b8377; font-size: 12px; line-height: 1.7; }
 .pagination { display: flex; align-items: center; gap: 16px; margin: 16px 0; font-size: 13px; }
 .pagination button { background: white; border: 1px solid #ccd3cc; border-radius: 4px; padding: 6px 12px; }
 .pagination button:disabled { opacity: .4; cursor: default; }
+
+.view-tabs { display:flex; gap:8px; flex-wrap:wrap; border-top:1px solid #ccd3cc; border-bottom:1px solid #ccd3cc; padding:12px 0; margin-bottom:24px; }
+.view-tabs button { background:transparent; border:0; padding:10px 14px; font-size:15px; color:#657067; border-radius:4px; }
+.view-tabs button[aria-pressed="true"] { color:#203d2c; background:#e9efe8; font-weight:600; }
+.scope-filters { display:flex; flex-wrap:wrap; gap:16px; align-items:end; padding-bottom:18px; }
+.scope-filters label { min-width:150px; }
+.plain-button { border:1px solid #ccd3cc; border-radius:4px; padding:10px 14px; background:white; color:#334c39; }
+.view-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.view-heading label { min-width:150px; }
+.view-note { font-size:14px; color:#626e60; line-height:1.8; }
+.heatmap-scroll { max-height:560px; overflow:auto; }
+.heatmap th { position:sticky; top:0; background:#f0f3ee; }
+.heatmap button { width:100%; min-width:64px; border:0; padding:12px 6px; color:#253e2d; font-size:14px; border-radius:2px; }
+.heatmap td { padding:3px; text-align:center; }
+.matrix th { max-width:170px; min-width:100px; white-space:normal; font-size:13px; }
+.matrix-cell { background:#edf2eb; color:#294b35; border:1px solid #d3dfd0; border-radius:3px; padding:9px 12px; min-width:60px; }
+.share-timeline { margin-top:32px; }
+[hidden] { display:none !important; }
+label { font-size:14px; }
+footer { font-size:13px; }
+
+.whatif-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin:24px 0; align-items:end; }
+.whatif-form input { height:44px; padding:8px 12px; background:#fff; border:1px solid #d4dad1; border-radius:4px; font:inherit; width:100%; }
+@media(max-width:640px) { .whatif-form { grid-template-columns:1fr; } .view-tabs { gap:2px; } .view-tabs button { padding:10px; } }

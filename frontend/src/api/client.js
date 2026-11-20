@@ -1,5 +1,5 @@
-export async function getData(path, signal) {
-  const response = await fetch(path, { signal })
+export async function getData(path, signal, options = {}) {
+  const response = await fetch(path, { ...options, signal })
   let body
   try {
     body = await response.json()
@@ -35,7 +35,10 @@ export async function getInstitutions(role, signal) {
     }
     query.set('offset', String(offset))
     page = await getData(`/api/institutions?${query}`, signal)
-    if (page.data_version !== first.data_version || page.total !== first.total) {
+    if (
+      page.data_version !== first.data_version ||
+      page.total !== first.total
+    ) {
       throw new Error('데이터가 갱신되었습니다. 다시 불러와 주세요.')
     }
     if (page.offset !== offset || !page.items.length) {
