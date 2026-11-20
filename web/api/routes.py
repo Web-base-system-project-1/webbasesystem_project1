@@ -130,7 +130,7 @@ def institutions():
     frame = store.institutions(
         role=role, query=request.args.get("q"), type_=request.args.get("type"),
         field=request.args.get("field"), domestic_id=request.args.get("domestic_id"),
-        foreign_id=request.args.get("foreign_id"),
+        foreign_id=request.args.get("foreign_id"), year=arg_int("year"),
     )
     total = len(frame)
     items = records(frame.iloc[offset:offset + limit])
@@ -443,7 +443,7 @@ def experiment_timeline():
     if threshold is None:
         raise ApiError("missing_parameter", "threshold가 필요합니다.")
     run = _filter_rows(store.metrics, scenario_id=scenario_id, detector=detector,
-                       threshold=threshold, correction_id="none")
+                       threshold=threshold, correction_id=request.args.get("correction_id", "none"))
     if len(run) != 1:
         raise ApiError("experiment_unavailable", "저장된 실험 설정이 없습니다.", 404)
     scenarios = experiment_scenarios(store)
@@ -457,11 +457,91 @@ def experiment_timeline():
         raise ApiError("pair_not_found", "해당 기관 쌍의 자료가 없습니다.", 404)
     cols = ["year", "collab_count", "international_total", "share"]
     hits = _filter_rows(store.detections, **pair, scenario_id=scenario_id,
-                        detector=detector, threshold=threshold, correction_id="none",
+                        detector=detector, threshold=threshold, correction_id=run.iloc[0]["correction_id"],
                         run_id=run.iloc[0]["run_id"])
+    before_run = _filter_rows(store.metrics, scenario_id=scenario_id, detector=detector,
+                               threshold=threshold, correction_id="none")
+    before_hits = _filter_rows(store.detections, **pair, scenario_id=scenario_id,
+                               run_id=before_run.iloc[0]["run_id"]) if len(before_run) == 1 else hits.iloc[:0]
     target = scenario.injections.iloc[0] if len(scenario.injections) else None
     return envelope(store, scenario_id=scenario_id, seed=store.experiment_manifest["seed"],
         original=records(original[cols]), points=records(changed[cols]),
         detections=records(hits), injections=records(_filter_rows(scenario.injections, **pair)),
         metrics=records(run)[0],
+        before_metrics=records(before_run)[0] if len(before_run) == 1 else None,
+        before_detections=records(before_hits), correction_id=run.iloc[0]["correction_id"],
         target={key: target[key] for key in pair} if target is not None else None)
+
+
+@api_bp.get("/matrix")
+def cooperation_matrix():
+    store = get_store()
+    field = arg_required("field")
+    year = arg_int("year")
+    domestic_id = request.args.get("domestic_id") or None
+    foreign_id = request.args.get("foreign_id") or None
+    type_ = request.args.get("type") or None
+    limit = arg_int("limit", default=15, minimum=1, maximum=30)
+    frame = _filter_rows(store.shares, field=field, year=year,
+                         domestic_id=domestic_id, foreign_id=foreign_id)
+    if request.args.get("country"):
+        frame = frame[frame["foreign_id"].isin([i for i, code in store._foreign_country.items() if code == request.args["country"]])]
+    if type_:
+        frame = frame[frame["domestic_id"].isin(store.domestic.loc[store.domestic["type"] == type_, "domestic_id"])]
+    grouped = frame.groupby(["domestic_id", "foreign_id"], as_index=False)["collab_count"].sum()
+    grouped = grouped[grouped.collab_count > 0]
+    domestic = grouped.groupby("domestic_id").collab_count.sum().sort_values(ascending=False).head(limit).index.tolist()
+    foreign = grouped.groupby("foreign_id").collab_count.sum().sort_values(ascending=False).head(limit).index.tolist()
+    visible = grouped[grouped.domestic_id.isin(domestic) & grouped.foreign_id.isin(foreign)]
+    found, _, _, _ = resolve_detections(store, {"field": field, "year": year,
+                                               "domestic_id": domestic_id, "foreign_id": foreign_id})
+    hits = found.groupby(["domestic_id", "foreign_id"]).size().to_dict() if len(found) else {}
+    items = [{**row, "detections": hits.get((row["domestic_id"], row["foreign_id"]), 0)} for row in records(visible)]
+    return envelope(store, total_pairs=len(grouped), count=len(items),
+        domestic=[{"id": i, "name": store.domestic_name(i)} for i in domestic],
+        foreign=[{"id": i, "name": store.foreign_name(i)} for i in foreign], items=items)
+
+
+@api_bp.post('/whatif')
+def whatif():
+    from web.data_store import experiment_scenarios
+    from web.whatif import calculate
+    store = get_store()
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict):
+        raise ApiError('invalid_parameter', 'JSON 객체가 필요합니다.')
+    detector = body.get('detector', 'zscore')
+    if detector not in ('zscore', 'growth'):
+        raise ApiError('invalid_parameter', '지원하지 않는 탐지기입니다.')
+    scenario_id = body.get('scenario_id', 'original')
+    if not isinstance(scenario_id, str) or scenario_id not in experiment_scenarios(store):
+        raise ApiError('invalid_parameter', '지원하지 않는 시나리오입니다.')
+    correction = body.get('correction_id', 'none')
+    allowed = ('none', 'min_international_total_3' if detector == 'zscore' else 'require_share_increase')
+    if correction not in allowed:
+        raise ApiError('invalid_parameter', '탐지기와 보정 규칙이 맞지 않습니다.')
+
+    def number(name, default, minimum, maximum, integer=False):
+        value = body.get(name, default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or (isinstance(value, float) and not math.isfinite(value)):
+            raise ApiError('invalid_parameter', f'{name}은 유한한 숫자여야 합니다.')
+        if value < minimum or value > maximum or (integer and int(value) != value):
+            raise ApiError('invalid_parameter', f'{name}의 범위를 확인하세요.')
+        return int(value) if integer else float(value)
+
+    k = number('k', 3, 2, 10, True)
+    minimum = number('min_count', 3, 0, 100000, True)
+    threshold = number('threshold', DEFAULT_THRESHOLDS[detector], 0, 1000)
+    reference, _ = calculate(store, scenario_id, detector, 3, DEFAULT_THRESHOLDS[detector], 3, 'none')
+    changed, cached = calculate(store, scenario_id, detector, k, threshold, minimum, correction)
+    columns = ['domestic_id', 'foreign_id', 'field', 'year']
+    before = reference['hits'].set_index(columns)
+    after = changed['hits'].set_index(columns)
+    added = after.loc[~after.index.isin(before.index)].reset_index()
+    removed = before.loc[~before.index.isin(after.index)].reset_index()
+    return envelope(store, scenario_id=scenario_id, cached=cached,
+        reference_params=reference['params'], params=changed['params'],
+        reference_metrics={key: clean(value) for key, value in reference['metrics'].items()},
+        metrics={key: clean(value) for key, value in changed['metrics'].items()},
+        added_total=len(added), removed_total=len(removed),
+        added=_with_names(store, added, 200), removed=_with_names(store, removed, 200))
