@@ -549,3 +549,97 @@ def test_comparison_rejects_unknown_or_missing_conditions(monkeypatch):
                              "&scenario_id=step_x5&detector=growth&threshold=2.5")
         assert missing.status_code == 404
         assert missing.get_json()["error"]["code"] == "comparison_unavailable"
+
+
+
+def test_whatif_recomputation_matches_the_stored_metrics(monkeypatch):
+    """실시간 재계산이 2번 담당자가 저장한 metrics.csv 와 같은 숫자를 낸다."""
+    with real_data_client(monkeypatch) as client:
+        stored = strict_json(client.get("/api/metrics?limit=1000"))["items"]
+        checked = 0
+        for row in stored:
+            if row["scenario_id"] != "step_x5":
+                continue
+            answer = strict_json(client.post("/api/whatif", json={
+                "detector": row["detector"], "threshold": row["threshold"],
+                "k": int(row["k"]), "min_count": int(row["min_count"]),
+                "scenario_id": row["scenario_id"], "correction_id": row["correction_id"],
+            }))
+            for name in ("tp", "fp", "fn", "decoy_fp"):
+                assert answer["metrics"][name] == row[name], (row["run_id"], name)
+            checked += 1
+        assert checked == 12, "탐지기 2개 × 임계값 3개 × (보정 전·후)"
+
+
+def test_whatif_lists_detections_that_appear_and_disappear(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        body = strict_json(client.post("/api/whatif", json={
+            "detector": "zscore", "threshold": 3.0, "scenario_id": "step_x5",
+            "baseline": {"threshold": 2.5}, "limit": 1000,
+        }))
+        counts = body["counts"]
+        assert counts["current"] + counts["removed"] == counts["baseline"] + counts["added"]
+        assert counts["unchanged"] == counts["current"] - counts["added"]
+        assert counts["added"] == 0 and counts["removed"] > 0, "임계값을 올리면 탐지는 줄기만 한다"
+        assert body["total"] == counts["added"] + counts["removed"] == len(body["items"])
+        assert body["unchanged_settings"] is False
+
+        # 임계값을 올렸으니 정탐도 오탐도 줄어든다.
+        assert body["delta"]["fp"] < 0 and body["delta"]["tp"] <= 0
+        for row in body["items"]:
+            assert row["change"] == "removed"
+            assert row["was_injected"] in (True, False)
+            assert row["domestic_name"] and row["foreign_name"]
+
+
+def test_whatif_reuses_the_cached_result_for_the_same_settings(monkeypatch):
+    from web.api import routes
+    routes._whatif_cache.clear()
+    with real_data_client(monkeypatch) as client:
+        request = {"detector": "growth", "threshold": 2.0, "scenario_id": "gradual_x3"}
+        first = strict_json(client.post("/api/whatif", json=request))
+        assert first["cached"] == {"current": False, "baseline": False}
+        second = strict_json(client.post("/api/whatif", json=request))
+        assert second["cached"] == {"current": True, "baseline": True}
+        assert second["counts"] == first["counts"]
+        assert second["metrics"] == first["metrics"]
+
+        # 캐시 키에 데이터 버전·시나리오·설정·보정이 모두 들어간다.
+        keys = list(routes._whatif_cache)
+        assert all(key[0] == first["data_version"] for key in keys)
+        assert {key[1] for key in keys} == {"gradual_x3"}
+        assert len({key[3] for key in keys}) == 2, "요청 설정과 기준 설정이 따로 보관된다"
+
+
+def test_whatif_without_experiment_records_runs_on_the_original_panel(client):
+    body = strict_json(client.post("/api/whatif", json={
+        "detector": "zscore", "threshold": 2.5, "baseline": {"threshold": 2.0}}))
+    assert body["scenario_id"] == "original"
+    assert body["metrics"] is None and body["delta"] is None, "정답이 없으면 지표도 없다"
+    assert body["counts"]["removed"] > 0
+
+    missing = client.post("/api/whatif", json={"detector": "zscore", "scenario_id": "step_x5"})
+    assert missing.status_code == 409
+    assert missing.get_json()["error"]["code"] == "whatif_unavailable"
+
+
+def test_whatif_rejects_settings_outside_the_allowed_range(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        for payload in (
+            {"detector": "nope"},
+            {"detector": "zscore", "threshold": "abc"},
+            {"detector": "zscore", "k": 1},
+            {"detector": "zscore", "min_count": -1},
+            {"detector": "zscore", "correction_id": "require_share_increase"},
+            {"detector": "zscore", "scenario_id": "없는시나리오"},
+            {"detector": "zscore", "baseline": "not-an-object"},
+        ):
+            response = client.post("/api/whatif", json=payload)
+            assert response.status_code == 400, payload
+            assert response.get_json()["error"]["code"] == "invalid_parameter"
+
+        # 본문이 비어 있으면 명세의 기본값으로 돈다.
+        default = strict_json(client.post("/api/whatif"))
+        assert default["params"] == {"detector": "zscore", "threshold": 2.5,
+                                     "k": 3, "min_count": 3, "correction_id": "none"}
+        assert default["unchanged_settings"] is True

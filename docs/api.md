@@ -498,13 +498,69 @@ GET /api/institutions?role=domestic&q=기관
 예를 들어 z-score 보정을 증가율 실행에 물어보면 짝이 없으므로 404 입니다.
 
 ---
+## POST `/api/whatif`
 
-## 아직 구현하지 않은 API
+임계값·k·최소 건수를 바꿔 **다시 계산**하고, 기준 설정과 견줍니다. **What-if 뷰용.**
 
-| 메서드 | 경로 | 목적 | 예정 |
-|---|---|---|---|
-| POST | `/api/whatif` | 임계값·k·최소 건수 변경 시 재계산과 지표 | 11/19~11/25 |
+저장된 결과를 읽는 것이 아니라 2번 담당자의 탐지·보정·평가 함수를 그 자리에서
+호출합니다. 수식을 API 에서 다시 구현하지 않습니다.
 
+요청 본문은 JSON 객체입니다. 지정하지 않은 값은 명세의 기본값(z-score 2.5,
+증가율 1.0, k 3, 최소 건수 3, 보정 없음)을 씁니다.
+
+| 필드 | 기본값 | 설명 |
+|---|---|---|
+| `detector` | `zscore` | `zscore`, `growth` |
+| `threshold` | 탐지기 기본값 | 유한한 숫자 |
+| `k` | 3 | 2~10 |
+| `min_count` | 3 | 0 이상 |
+| `scenario_id` | `original` | 주입 시나리오 |
+| `correction_id` | `none` | 해당 탐지기의 보정 또는 `none` |
+| `baseline` | 기본 설정 | 견줄 설정. `threshold`·`k`·`min_count`·`correction_id` 만 바꿉니다 |
+| `limit` | 100 | 최대 1000 |
+
+```json
+{ "detector": "zscore", "threshold": 3.0, "scenario_id": "step_x5",
+  "baseline": { "threshold": 2.5 } }
+```
+
+```json
+{
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
+  "scenario_id": "step_x5",
+  "params":   { "detector": "zscore", "threshold": 3.0, "k": 3, "min_count": 3, "correction_id": "none" },
+  "baseline": { "detector": "zscore", "threshold": 2.5, "k": 3, "min_count": 3, "correction_id": "none" },
+  "unchanged_settings": false,
+  "metrics":          { "tp": 4, "fp": 305, "fn": 96, "recall": 0.04, "f1": 0.0196 },
+  "baseline_metrics": { "tp": 6, "fp": 462, "fn": 94, "recall": 0.06, "f1": 0.0211 },
+  "delta":            { "tp": -2, "fp": -157, "recall": -0.02, "f1": -0.0016 },
+  "counts": { "current": 309, "baseline": 468, "added": 0, "removed": 159, "unchanged": 309 },
+  "cached": { "current": false, "baseline": false },
+  "summary": { "evaluated_rows": 63857, "skipped": { "insufficient_history": 41724, "zero_std": 20789 } },
+  "total": 159, "count": 100,
+  "items": [
+    { "domestic_id": "...", "domestic_name": "...", "field": "bio", "year": 2023,
+      "score": 2.97, "change": "removed", "was_injected": false }
+  ]
+}
+```
+
+`items` 의 `change` 는 기준 설정 대비 **`added`(새로 생긴 탐지)** 와
+**`removed`(사라진 탐지)** 입니다. `was_injected` 로 그것이 주입 정답이었는지
+구분합니다. 화면의 「새로 생긴/사라진 탐지 표시」가 이 목록입니다.
+
+**캐시**: 같은 설정으로 다시 물으면 계산하지 않고 보관한 결과를 돌려주고
+`cached` 가 `true` 가 됩니다. 캐시 키에 **데이터 버전·시나리오·탐지기·임계값·k·
+최소 건수·보정 버전**이 모두 들어가므로 오래된 결과가 섞이지 않습니다.
+보관하는 설정은 최근 8벌입니다.
+
+`metrics` 는 주입 정답이 있는 데이터에서만 나옵니다. 실험 기록이 없는 폴더에서는
+`metrics` 와 `delta` 가 `null` 이고 탐지 목록과 증감만 제공합니다. 그런 폴더에
+주입 시나리오를 요청하면 **409 `whatif_unavailable`**, `collab_counts.csv` 와
+`kr_totals.csv` 가 없으면 **409 `detection_unavailable`** 입니다.
+
+v2 데이터에서는 이 재계산 결과가 저장된 `metrics.csv` 의 `tp`·`fp`·`fn`·`decoy_fp`
+와 정확히 일치합니다(`tests/test_api.py` 에서 step_x5 의 12개 실행으로 확인).
 
 ## 현재 한계
 
