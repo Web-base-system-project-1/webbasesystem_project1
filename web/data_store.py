@@ -80,6 +80,8 @@ class DataStore:
         self._panel = None
         self._detector_cache = OrderedDict()
         self._detector_lock = Lock()
+        self._whatif_cache = OrderedDict()
+        self._whatif_lock = Lock()
 
     def _load_tables(self, directory):
         self.manifest = self._read_manifest(directory)

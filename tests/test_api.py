@@ -558,8 +558,6 @@ def test_whatif_recomputation_matches_the_stored_metrics(monkeypatch):
         stored = strict_json(client.get("/api/metrics?limit=1000"))["items"]
         checked = 0
         for row in stored:
-            if row["scenario_id"] != "step_x5":
-                continue
             answer = strict_json(client.post("/api/whatif", json={
                 "detector": row["detector"], "threshold": row["threshold"],
                 "k": int(row["k"]), "min_count": int(row["min_count"]),
@@ -568,7 +566,7 @@ def test_whatif_recomputation_matches_the_stored_metrics(monkeypatch):
             for name in ("tp", "fp", "fn", "decoy_fp"):
                 assert answer["metrics"][name] == row[name], (row["run_id"], name)
             checked += 1
-        assert checked == 12, "탐지기 2개 × 임계값 3개 × (보정 전·후)"
+        assert checked == 84, "시나리오 7개 × 탐지기 2개 × 임계값 3개 × (보정 전·후)"
 
 
 def test_whatif_lists_detections_that_appear_and_disappear(monkeypatch):
@@ -593,8 +591,6 @@ def test_whatif_lists_detections_that_appear_and_disappear(monkeypatch):
 
 
 def test_whatif_reuses_the_cached_result_for_the_same_settings(monkeypatch):
-    from web.api import routes
-    routes._whatif_cache.clear()
     with real_data_client(monkeypatch) as client:
         request = {"detector": "growth", "threshold": 2.0, "scenario_id": "gradual_x3"}
         first = strict_json(client.post("/api/whatif", json=request))
@@ -605,7 +601,7 @@ def test_whatif_reuses_the_cached_result_for_the_same_settings(monkeypatch):
         assert second["metrics"] == first["metrics"]
 
         # 캐시 키에 데이터 버전·시나리오·설정·보정이 모두 들어간다.
-        keys = list(routes._whatif_cache)
+        keys = list(data_store.get_store()._whatif_cache)
         assert all(key[0] == first["data_version"] for key in keys)
         assert {key[1] for key in keys} == {"gradual_x3"}
         assert len({key[3] for key in keys}) == 2, "요청 설정과 기준 설정이 따로 보관된다"

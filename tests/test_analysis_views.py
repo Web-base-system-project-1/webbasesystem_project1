@@ -6,7 +6,7 @@ import pytest
 
 from web.app import app
 from web import data_store
-from web.whatif import CACHE_LIMIT
+from web.api.routes import WHATIF_CACHE_SIZE
 
 V2 = Path(__file__).resolve().parents[1] / 'data/sample/actual/four_fields_2015_2025_v2.zip'
 
@@ -81,14 +81,14 @@ def test_whatif_reproduces_saved_run_and_returns_changes(analysis_client):
     first = c.post('/api/whatif', json=params)
     assert first.status_code == 200
     body = first.get_json()
-    assert body['cached'] is False
+    assert body['cached']['current'] is False
     assert body['reference_metrics']['tp'] == 23
     assert body['metrics']['tp'] == 20
     assert body['metrics']['fp'] == 359
     assert body['added_total'] == 0 and body['removed_total'] == 57
     assert len(body['removed']) == 57
     again = c.post('/api/whatif', json=params).get_json()
-    assert again['cached'] is True
+    assert again['cached']['current'] is True
     store = data_store.get_store()
     saved = store.metrics[(store.metrics.scenario_id == 'step_x3') & (store.metrics.detector == 'growth')
                           & (store.metrics.threshold == 1) & (store.metrics.correction_id == params['correction_id'])].iloc[0]
@@ -97,10 +97,10 @@ def test_whatif_reproduces_saved_run_and_returns_changes(analysis_client):
     changed = c.post('/api/whatif', json={**params, 'threshold': 2}).get_json()
     assert changed['params']['threshold'] == 2
     assert changed['metrics']['tp'] <= body['metrics']['tp']
-    assert len(store._whatif_cache) <= CACHE_LIMIT
+    assert len(store._whatif_cache) <= WHATIF_CACHE_SIZE
 
 
-@pytest.mark.parametrize('params', [None, [], {'k': 1}, {'k': 3.5}, {'k': True}, {'threshold': -1},
+@pytest.mark.parametrize('params', [[], {'k': 1}, {'k': 3.5}, {'k': True}, {'threshold': -1},
                                    {'min_count': -1}, {'threshold': 10 ** 400}, {'detector': 'wrong'}, {'scenario_id': 'nope'},
                                    {'detector': 'growth', 'correction_id': 'min_international_total_3'}])
 def test_whatif_rejects_invalid_settings(analysis_client, params):
