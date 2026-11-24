@@ -9,6 +9,15 @@ from web.app import app
 from web import data_store
 
 
+@pytest.fixture(autouse=True)
+def real_integration_data(monkeypatch):
+    # Team members may have a different DATA_DIR in their local environment.
+    monkeypatch.setenv("DATA_DIR", str(
+        Path(__file__).resolve().parents[1] / "data/sample/actual/four_fields_2015_2025_v2.zip"
+    ))
+    monkeypatch.setattr(data_store, "_store", None)
+
+
 @pytest.mark.parametrize("payload", [
     {"detector": []}, {"scenario_id": {}}, {"baseline": []},
     {"k": 3.5}, {"min_count": 1.5}, {"threshold": -1},
