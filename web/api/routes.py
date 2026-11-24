@@ -465,3 +465,246 @@ def experiment_timeline():
         detections=records(hits), injections=records(_filter_rows(scenario.injections, **pair)),
         metrics=records(run)[0],
         target={key: target[key] for key in pair} if target is not None else None)
+
+
+
+# ------------------------------------------------------------------- 보정 비교
+
+NO_CORRECTION = "none"
+RUN_KEYS = ("scenario_id", "detector", "threshold", "k", "min_count")
+DETECTION_KEYS = ("domestic_id", "foreign_id", "field", "year")
+METRIC_COLUMNS = ("tp", "fp", "fn", "precision", "recall", "f1",
+                  "recall_effective", "delay_mean", "missed_pairs", "decoy_fp")
+CHANGE_LABELS = ("resolved_false_positive", "lost_true_positive",
+                 "introduced_false_positive", "introduced_true_positive")
+
+
+def _count(row, name):
+    """결측을 0 으로 본 정수. 합계를 낼 때만 쓴다."""
+    value = clean(row.get(name))
+    return int(value) if value is not None else 0
+
+
+def _run_signature(frame):
+    """실험 조건을 문자열 하나로 묶는다. k 가 결측인 증가율 실행도 짝지을 수 있다."""
+    empty = pd.Series([None] * len(frame), index=frame.index)
+    parts = []
+    for key in RUN_KEYS:
+        column = frame[key] if key in frame.columns else empty
+        parts.append(column.astype("object").where(column.notna(), "").astype(str))
+    return parts[0].str.cat(parts[1:], sep="|")
+
+
+def _metric_values(row):
+    return {name: clean(row.get(name)) for name in METRIC_COLUMNS if name in row}
+
+
+def _require_corrections(store):
+    """보정 전후를 짝지을 수 있는 상태인지 확인하고 보정 이름 목록을 돌려준다."""
+    if store.metrics.empty:
+        raise ApiError(
+            "metrics_unavailable",
+            "이 데이터에는 metrics.csv 가 없습니다. python -m experiments.run 으로 만듭니다.",
+            status=409,
+        )
+    if "correction_id" not in store.metrics.columns:
+        raise ApiError(
+            "comparison_unavailable",
+            "metrics.csv 에 correction_id 열이 없어 보정 전후를 짝지을 수 없습니다.",
+            status=409,
+        )
+    names = sorted(
+        name for name in store.metrics["correction_id"].dropna().unique()
+        if name != NO_CORRECTION
+    )
+    if not names:
+        raise ApiError(
+            "comparison_unavailable",
+            "보정을 적용한 실행이 없습니다. correction_id 가 none 인 결과만 있습니다.",
+            status=409,
+        )
+    return names
+
+
+def _paired_runs(store, correction_id=None):
+    """보정 후 실행마다 같은 조건의 보정 전 실행을 찾아 (before, after) 로 묶는다.
+
+    탐지기마다 적용하는 보정이 달라도, 같은 조건이 있는 실행만 짝이 되므로
+    z-score 보정과 증가율 보정이 섞이지 않는다.
+    """
+    frame = store.metrics.assign(signature=_run_signature(store.metrics))
+    before = {
+        row["signature"]: row
+        for row in frame[frame["correction_id"] == NO_CORRECTION].to_dict("records")
+    }
+    pairs = []
+    for after in frame[frame["correction_id"] != NO_CORRECTION].to_dict("records"):
+        if correction_id and after["correction_id"] != correction_id:
+            continue
+        base = before.get(after["signature"])
+        if base is not None:
+            pairs.append((base, after))
+    return pairs
+
+
+def _correction_summary(pairs):
+    """보정별로 오탐이 얼마나 줄고 정탐이 얼마나 사라졌는지 합계."""
+    totals = {}
+    for base, after in pairs:
+        row = totals.setdefault(after["correction_id"], {
+            "correction_id": after["correction_id"], "runs": 0,
+            "tp_before": 0, "tp_after": 0, "fp_before": 0, "fp_after": 0,
+            "decoy_fp_before": 0, "decoy_fp_after": 0,
+        })
+        row["runs"] += 1
+        for name in ("tp", "fp", "decoy_fp"):
+            row[f"{name}_before"] += _count(base, name)
+            row[f"{name}_after"] += _count(after, name)
+    for row in totals.values():
+        row["fp_removed"] = row["fp_before"] - row["fp_after"]
+        row["tp_lost"] = row["tp_before"] - row["tp_after"]
+        row["decoy_fp_removed"] = row["decoy_fp_before"] - row["decoy_fp_after"]
+    return [totals[name] for name in sorted(totals)]
+
+
+def _correction_arg(corrections, required=False):
+    value = arg_required("correction_id") if required else (request.args.get("correction_id") or None)
+    if value is not None and value not in corrections:
+        raise ApiError(
+            "invalid_parameter",
+            f"correction_id 는 {' 또는 '.join(corrections)} 중 하나여야 합니다. 받은 값: {value}",
+        )
+    return value
+
+
+@api_bp.get("/comparison")
+def comparison():
+    """보정 전후를 같은 실험 조건끼리 짝지어 돌려준다. 보정 비교 뷰용.
+
+    숫자는 2번 담당자의 experiments.evaluate 가 만든 metrics.csv 를 그대로 쓴다.
+    여기서 지표를 다시 계산하지 않는다.
+    """
+    store = get_store()
+    corrections = _require_corrections(store)
+    correction_id = _correction_arg(corrections)
+    scenario_id = request.args.get("scenario_id") or None
+    detector = arg_detector()
+    threshold = arg_float("threshold")
+    limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
+
+    pairs = _paired_runs(store, correction_id)
+    items = []
+    for base, after in pairs:
+        if scenario_id and after["scenario_id"] != scenario_id:
+            continue
+        if detector and after["detector"] != detector:
+            continue
+        if threshold is not None and clean(after["threshold"]) != threshold:
+            continue
+        before_values, after_values = _metric_values(base), _metric_values(after)
+        items.append({
+            **{key: clean(after.get(key)) for key in RUN_KEYS},
+            "correction_id": after["correction_id"],
+            "run_id": {"before": base.get("run_id"), "after": after.get("run_id")},
+            "before": before_values,
+            "after": after_values,
+            "delta": {
+                name: None if before_values.get(name) is None or value is None
+                else round(value - before_values[name], 6)
+                for name, value in after_values.items()
+            },
+        })
+    items.sort(key=lambda row: (
+        row["correction_id"], row["scenario_id"], row["detector"], row["threshold"]))
+
+    return envelope(
+        store, corrections=corrections,
+        summary=_correction_summary(pairs),
+        total=len(items), count=min(len(items), limit), items=items[:limit],
+    )
+
+
+@api_bp.get("/comparison/changes")
+def comparison_changes():
+    """보정으로 판정이 바뀐 탐지 행. 바로잡힌 오탐과 사라진 정탐을 구분한다.
+
+    보정 전 실행에만 있는 행은 보정이 지운 것이고, 주입 정답에 있으면
+    lost_true_positive(새로 생긴 오류), 없으면 resolved_false_positive(바로잡힌 오류)다.
+    """
+    store = get_store()
+    corrections = _require_corrections(store)
+    correction_id = _correction_arg(corrections, required=True)
+    scenario_id = arg_required("scenario_id")
+    detector = arg_detector()
+    if detector is None:
+        raise ApiError("missing_parameter", "detector 는 필수입니다.")
+    threshold = arg_float("threshold")
+    if threshold is None:
+        raise ApiError("missing_parameter", "threshold 는 필수입니다.")
+    change = request.args.get("change") or None
+    if change is not None and change not in CHANGE_LABELS:
+        raise ApiError(
+            "invalid_parameter",
+            f"change 는 {' 또는 '.join(CHANGE_LABELS)} 중 하나여야 합니다. 받은 값: {change}",
+        )
+    limit = arg_int("limit", default=100, minimum=1, maximum=MAX_LIMIT)
+
+    found = [
+        (base, after) for base, after in _paired_runs(store, correction_id)
+        if after["scenario_id"] == scenario_id and after["detector"] == detector
+        and clean(after["threshold"]) == threshold
+    ]
+    if not found:
+        raise ApiError(
+            "comparison_unavailable",
+            "그 조건으로 저장된 보정 전후 실행이 없습니다.",
+            status=404,
+        )
+    base, after = found[0]
+
+    def key_of(row):
+        return tuple(row.get(name) for name in DETECTION_KEYS)
+
+    before_items = records(_filter_rows(
+        store.detections, scenario_id=scenario_id, run_id=base.get("run_id")))
+    after_items = records(_filter_rows(
+        store.detections, scenario_id=scenario_id, run_id=after.get("run_id")))
+    truth = store.injections_for(scenario_id=scenario_id)
+    truth_keys = {key_of(row) for row in records(truth)} if len(truth) else set()
+
+    before_keys = {key_of(row) for row in before_items}
+    after_keys = {key_of(row) for row in after_items}
+    removed, added = before_keys - after_keys, after_keys - before_keys
+
+    items, counts = [], {name: 0 for name in CHANGE_LABELS}
+    for source, changed, labels in (
+        (before_items, removed, ("lost_true_positive", "resolved_false_positive")),
+        (after_items, added, ("introduced_true_positive", "introduced_false_positive")),
+    ):
+        for row in source:
+            key = key_of(row)
+            if key not in changed:
+                continue
+            injected = key in truth_keys
+            label = labels[0] if injected else labels[1]
+            counts[label] += 1
+            items.append({**row, "change": label, "was_injected": injected})
+
+    items.sort(key=lambda row: (row["change"], -(row.get("score") or 0)))
+    shown = [row for row in items if change is None or row["change"] == change]
+
+    return envelope(
+        store,
+        run={**{key: clean(after.get(key)) for key in RUN_KEYS}, "correction_id": correction_id},
+        run_id={"before": base.get("run_id"), "after": after.get("run_id")},
+        before_detections=len(before_items), after_detections=len(after_items),
+        unchanged=len(before_keys & after_keys),
+        counts=counts,
+        total=len(shown), count=min(len(shown), limit),
+        items=[{
+            **row,
+            "domestic_name": store.domestic_name(row.get("domestic_id")),
+            "foreign_name": store.foreign_name(row.get("foreign_id")),
+            "foreign_country": store.foreign_country(row.get("foreign_id")),
+        } for row in shown[:limit]],
+    )

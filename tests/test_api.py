@@ -457,3 +457,95 @@ def test_default_country_overview_matches_deduplicated_csv(monkeypatch):
             "/api/metrics?detector=zscore&threshold=2.5&correction_id=min_international_total_3"
         ))
         assert corrected["total"] == 7
+
+
+
+def real_data_client(monkeypatch):
+    """기본 데이터(보정 2개가 들어간 v2)로 요청하는 클라이언트."""
+    monkeypatch.delenv("DATA_DIR", raising=False)
+    monkeypatch.setattr(dataset_source, "dotenv_values", lambda _: {})
+    monkeypatch.setattr(data_store, "_store", None)
+    return app.test_client()
+
+
+def test_comparison_is_409_without_a_stored_experiment(client):
+    response = client.get("/api/comparison")
+    assert response.status_code == 409
+    assert response.get_json()["error"]["code"] == "metrics_unavailable"
+
+
+def test_comparison_pairs_every_correction_with_its_own_baseline(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        body = strict_json(client.get("/api/comparison?limit=1000"))
+        assert body["corrections"] == ["min_international_total_3", "require_share_increase"]
+        assert body["total"] == len(body["items"]) == 42, "보정 2개 × 21 실행"
+
+        for row in body["items"]:
+            assert row["correction_id"] != "none"
+            assert row["run_id"]["before"].endswith("corr=none")
+            assert row["run_id"]["after"].endswith(f"corr={row['correction_id']}")
+            # 보정은 탐지를 지우기만 하므로 정탐도 오탐도 늘 수 없다.
+            assert row["delta"]["fp"] == row["after"]["fp"] - row["before"]["fp"]
+            assert row["delta"]["fp"] <= 0 and row["delta"]["tp"] <= 0
+            # 탐지기마다 적용하는 보정이 다르므로 섞이면 안 된다.
+            expected = "zscore" if row["correction_id"] == "min_international_total_3" else "growth"
+            assert row["detector"] == expected
+
+        summary = {row["correction_id"]: row for row in body["summary"]}
+        assert set(summary) == set(body["corrections"])
+        assert all(row["runs"] == 21 for row in summary.values())
+        zscore_rule = summary["min_international_total_3"]
+        assert zscore_rule["fp_removed"] > 0 and zscore_rule["tp_lost"] == 0, "총수 조건은 정탐을 지우지 않는다"
+        growth_rule = summary["require_share_increase"]
+        assert growth_rule["fp_removed"] > 0 and growth_rule["tp_lost"] > 0, "비중 조건은 정탐도 일부 지운다"
+
+
+def test_comparison_filters_narrow_the_pairs(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        body = strict_json(client.get(
+            "/api/comparison?correction_id=require_share_increase&threshold=1.0"))
+        assert body["total"] == 7, "시나리오 7개"
+        assert {row["scenario_id"] for row in body["items"]} == {
+            "original", "step_x2", "step_x3", "step_x5", "gradual_x3", "spike_x5", "decoy_x3"}
+        for row in body["items"]:
+            assert row["detector"] == "growth" and row["threshold"] == 1.0
+
+
+def test_comparison_changes_separates_fixed_errors_from_new_ones(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        body = strict_json(client.get(
+            "/api/comparison/changes?correction_id=min_international_total_3"
+            "&scenario_id=step_x5&detector=zscore&threshold=2.5&limit=1000"))
+        counts = body["counts"]
+        assert counts["resolved_false_positive"] + counts["lost_true_positive"] == \
+            body["before_detections"] - body["unchanged"]
+        assert counts["introduced_false_positive"] + counts["introduced_true_positive"] == \
+            body["after_detections"] - body["unchanged"]
+        assert counts["lost_true_positive"] == 0, "총수 조건은 주입 정답을 지우지 않았다"
+        assert counts["resolved_false_positive"] > 0
+        for row in body["items"]:
+            assert row["change"] == "resolved_false_positive" and row["was_injected"] is False
+            assert row["international_total"] < 3, "보정 규칙 그대로 총수 3편 미만만 지워진다"
+            assert row["domestic_name"] and row["foreign_name"]
+
+        lost = strict_json(client.get(
+            "/api/comparison/changes?correction_id=require_share_increase"
+            "&scenario_id=step_x5&detector=growth&threshold=1.0&change=lost_true_positive"))
+        assert lost["counts"]["lost_true_positive"] == lost["total"] > 0
+        assert all(row["was_injected"] is True for row in lost["items"])
+
+
+def test_comparison_rejects_unknown_or_missing_conditions(monkeypatch):
+    with real_data_client(monkeypatch) as client:
+        assert client.get("/api/comparison?correction_id=nope").status_code == 400
+        assert client.get("/api/comparison?threshold=abc").status_code == 400
+        # 필수 쿼리 누락
+        assert client.get("/api/comparison/changes?scenario_id=step_x5"
+                          "&detector=zscore&threshold=2.5").status_code == 400
+        assert client.get("/api/comparison/changes?correction_id=min_international_total_3"
+                          "&scenario_id=step_x5&detector=zscore").status_code == 400
+        # 저장되지 않은 조합: z-score 보정을 증가율에 물어본 경우
+        missing = client.get("/api/comparison/changes?correction_id=min_international_total_3"
+                             "&scenario_id=step_x5&detector=growth&threshold=2.5")
+        assert missing.status_code == 404
+        assert missing.get_json()["error"]["code"] == "comparison_unavailable"
