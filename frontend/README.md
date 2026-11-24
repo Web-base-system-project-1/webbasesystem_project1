@@ -44,7 +44,7 @@ API 키·수동 압축 해제 없이 실행할 수 있습니다.
 - 평가: 전체 실험의 TP/FP/FN·Precision·Recall·F1·유효 주입 행 Recall·평균 지연. 기관별 수치가 아닙니다.
 
 - 보정 비교: 증가율의 비중 동반 증가 보정과 Z-score의 국내 총수 최소 3편 보정을 각각 선택합니다. 동일 시나리오·임계값의 전체 평가와 선택 쌍의 판정 변화·주입 정답 기준 오류 유형을 표시합니다.
-- What-if: 시나리오·탐지기·임계값·k·최소 건수·보정을 정하고 `결과 재계산`을 누릅니다. 같은 시나리오의 기본 설정 대비 전체 지표와 추가/해제 탐지를 비교합니다. 위 기관·연도 필터와 별도이며, 기관 링크는 원본 타임라인으로 이동합니다.
+- What-if: 시나리오·탐지기·임계값·k·최소 건수·보정을 정하고 `다시 계산`을 누릅니다. 같은 시나리오의 기본 설정 대비 전체 지표와 추가/해제 탐지를 비교합니다. 위 기관·연도 필터와 별도이며, 기관 링크는 원본 타임라인으로 이동합니다.
 
 기본 데이터 v2의 보정 전후 84회 저장 결과를 사용합니다. What-if는 기존 탐지·평가 함수를 재실행합니다.
 실험 평가와 대표 사례는 [데이터 v2 검증](../docs/data-review-2026-11-19.md)을 참고하세요.
@@ -60,7 +60,7 @@ API 키·수동 압축 해제 없이 실행할 수 있습니다.
 - src/components/ExperimentView.jsx: 시나리오 비교·탐지 근거·전체 평가
 - src/components/OverviewHeatmap.jsx, CooperationMatrix.jsx: 국가 개요·기관 관계
 - src/components/ShareTimeline.jsx: 비중·과거 기준선·탐지 근거
-- src/components/CorrectionView.jsx, WhatIfView.jsx: 보정 전후·설정 재계산
+- src/components/CorrectionView.jsx, WhatIfPanel.jsx: 보정 전후·설정 재계산
 - src/hooks/useApi.js: 취소·재조회·데이터 버전 확인
 
 ## 검증
