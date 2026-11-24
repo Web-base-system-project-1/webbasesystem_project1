@@ -10,7 +10,7 @@ import OverviewHeatmap from './components/OverviewHeatmap'
 import CooperationMatrix from './components/CooperationMatrix'
 import ShareTimeline from './components/ShareTimeline'
 import CorrectionView from './components/CorrectionView'
-import WhatIfView from './components/WhatIfView'
+import WhatIfPanel from './components/WhatIfPanel'
 import './App.css'
 
 function App() {
@@ -380,7 +380,8 @@ function App() {
         />
       )}
       {catalog && view === 'whatif' && (
-        <WhatIfView
+        <WhatIfPanel
+          key={catalog.meta.data_version}
           version={catalog.meta.data_version}
           onSelect={selectDetection}
         />

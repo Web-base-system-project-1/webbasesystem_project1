@@ -1,4 +1,4 @@
-// POST /api/whatif 전용 호출. client.js 는 GET 전용이라 따로 둔다.
+// POST /api/whatif의 응답과 현재 데이터 버전을 확인한다.
 
 export const DEFAULT_THRESHOLDS = { zscore: 2.5, growth: 1.0 }
 export const CORRECTION_RULES = {
@@ -18,7 +18,7 @@ export function defaultSettings(detector = 'zscore') {
   }
 }
 
-export async function postWhatIf(settings, signal) {
+export async function postWhatIf(settings, signal, expectedVersion) {
   const response = await fetch('/api/whatif', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -46,5 +46,7 @@ export async function postWhatIf(settings, signal) {
     error.code = body.error?.code
     throw error
   }
+  if (expectedVersion && body.data_version !== expectedVersion)
+    throw new Error('데이터가 바뀌었습니다. 새로고침해 주세요.')
   return body
 }
