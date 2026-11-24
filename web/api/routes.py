@@ -708,3 +708,231 @@ def comparison_changes():
             "foreign_country": store.foreign_country(row.get("foreign_id")),
         } for row in shown[:limit]],
     )
+
+
+# --------------------------------------------------------------------- What-if
+
+from collections import OrderedDict
+
+ORIGINAL_SCENARIO = "original"
+WHATIF_CACHE_SIZE = 8
+CORRECTION_RULES = {"zscore": "min_international_total_3", "growth": "require_share_increase"}
+SETTING_KEYS = ("threshold", "k", "min_count", "correction_id")
+
+_whatif_cache = OrderedDict()
+
+
+def _body():
+    data = request.get_json(silent=True)
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ApiError("invalid_parameter", "요청 본문은 JSON 객체여야 합니다.")
+    return data
+
+
+def _setting(data, name, default, cast=float, minimum=None, maximum=None):
+    value = data.get(name, default)
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise ApiError("invalid_parameter", f"{name} 은 숫자여야 합니다. 받은 값: {value}")
+    try:
+        value = cast(value)
+    except (TypeError, ValueError):
+        raise ApiError("invalid_parameter", f"{name} 은 숫자여야 합니다. 받은 값: {value}")
+    if not math.isfinite(value):
+        raise ApiError("invalid_parameter", f"{name} 은 유한한 숫자여야 합니다.")
+    if minimum is not None and value < minimum:
+        raise ApiError("invalid_parameter", f"{name} 은 {minimum} 이상이어야 합니다.")
+    if maximum is not None and value > maximum:
+        raise ApiError("invalid_parameter", f"{name} 은 {maximum} 이하여야 합니다.")
+    return value
+
+
+def _whatif_settings(data, detector):
+    """탐지 설정 한 벌. 지정하지 않은 값은 명세의 기본값을 쓴다."""
+    correction_id = data.get("correction_id") or NO_CORRECTION
+    if correction_id != NO_CORRECTION and correction_id != CORRECTION_RULES[detector]:
+        raise ApiError(
+            "invalid_parameter",
+            f"{detector} 에 쓸 수 있는 보정은 none 과 {CORRECTION_RULES[detector]} 뿐입니다."
+            f" 받은 값: {correction_id}",
+        )
+    return {
+        "threshold": _setting(data, "threshold", DEFAULT_THRESHOLDS[detector]),
+        "k": _setting(data, "k", DEFAULT_K, cast=int, minimum=2, maximum=10),
+        "min_count": _setting(data, "min_count", DEFAULT_MIN_COUNT, cast=int, minimum=0),
+        "correction_id": correction_id,
+    }
+
+
+def _whatif_scenario(store, scenario_id):
+    """재계산에 쓸 패널과 정답. 주입 기록이 없으면 원본 패널만 돌려준다."""
+    from web.data_store import experiment_scenarios
+    if not store.can_detect:
+        raise ApiError(
+            "detection_unavailable",
+            "이 데이터 폴더에는 collab_counts.csv 와 kr_totals.csv 가 없어 재계산할 수 없습니다.",
+            status=409,
+        )
+    if not store.experiment_manifest:
+        if scenario_id != ORIGINAL_SCENARIO:
+            raise ApiError(
+                "whatif_unavailable",
+                "이 데이터에는 주입 실험 기록이 없어 원본 시나리오만 재계산할 수 있습니다.",
+                status=409,
+            )
+        return store.panel, None, None
+    scenarios = experiment_scenarios(store)
+    if scenario_id not in scenarios:
+        raise ApiError(
+            "invalid_parameter",
+            f"scenario_id 는 {', '.join(sorted(scenarios))} 중 하나여야 합니다. 받은 값: {scenario_id}",
+        )
+    scenario = scenarios[scenario_id]
+    return scenario.panel, scenario.injections, scenario.decoy_targets
+
+
+def _apply_correction(detector, result, panel, correction_id):
+    from experiments.correct import require_min_international_total, require_share_increase
+    if correction_id == NO_CORRECTION:
+        return result
+    if detector == "zscore":
+        return require_min_international_total(result)
+    return require_share_increase(result, panel)
+
+
+def _whatif_run(store, scenario_id, panel, injections, decoys, detector, settings):
+    """설정 한 벌로 탐지를 다시 돌리고 지표까지 낸다. 같은 설정이면 보관한 결과를 쓴다.
+
+    캐시 키에 데이터 버전·시나리오·탐지기·설정·보정 버전이 모두 들어가므로
+    데이터 폴더를 바꾸거나 시나리오를 바꾸면 이전 결과가 섞이지 않는다.
+    """
+    from detectors import DETECTORS
+    from experiments.evaluate import evaluate
+
+    key = (store.data_version, scenario_id, detector,
+           settings["threshold"], settings["k"], settings["min_count"], settings["correction_id"])
+    if key in _whatif_cache:
+        _whatif_cache.move_to_end(key)
+        return _whatif_cache[key], True
+
+    params = {"k": settings["k"], "threshold": settings["threshold"], "min_count": settings["min_count"]}
+    result = DETECTORS[detector](panel, params).dropna(subset=["collab_count"])
+    result = _apply_correction(detector, result, panel, settings["correction_id"])
+    hits = result[result["detected"]]
+
+    metrics = None
+    if injections is not None:
+        run_id = (f"{detector}|th={settings['threshold']}|k={settings['k']}"
+                  f"|min={settings['min_count']}|corr={settings['correction_id']}")
+        runs = pd.DataFrame([{
+            "scenario_id": scenario_id, "run_id": run_id, "detector": detector,
+            "threshold": settings["threshold"], "k": settings["k"],
+            "min_count": settings["min_count"], "correction_id": settings["correction_id"],
+        }])
+        tagged = hits.assign(scenario_id=scenario_id, run_id=run_id,
+                             correction_id=settings["correction_id"])
+        scored = evaluate(injections, tagged, runs,
+                          decoys if decoys is not None and len(decoys) else None)
+        metrics = {name: clean(value) for name, value in scored.iloc[0].items()
+                   if name in METRIC_COLUMNS}
+
+    outcome = {
+        "items": records(hits),
+        "metrics": metrics,
+        "evaluated_rows": int(len(result)),
+        "skipped": {reason: int(count)
+                    for reason, count in result["skip_reason"].dropna().value_counts().items()},
+    }
+    _whatif_cache[key] = outcome
+    if len(_whatif_cache) > WHATIF_CACHE_SIZE:
+        _whatif_cache.popitem(last=False)
+    return outcome, False
+
+
+@api_bp.post("/whatif")
+def whatif():
+    """임계값·k·최소 건수를 바꿔 다시 계산하고, 기준 설정과 견준다. What-if 뷰용.
+
+    요청 본문(JSON)의 예:
+        {"detector": "zscore", "threshold": 3.0, "k": 3, "min_count": 3,
+         "scenario_id": "step_x5", "baseline": {"threshold": 2.5}}
+
+    탐지는 2번 담당자의 탐지·보정·평가 함수를 그대로 호출한다. 여기서 수식을
+    다시 구현하지 않는다.
+    """
+    store = get_store()
+    data = _body()
+
+    detector = data.get("detector", "zscore")
+    if detector not in DEFAULT_THRESHOLDS:
+        raise ApiError(
+            "invalid_parameter",
+            f"detector 는 {' 또는 '.join(sorted(DEFAULT_THRESHOLDS))} 여야 합니다. 받은 값: {detector}",
+        )
+    scenario_id = data.get("scenario_id") or ORIGINAL_SCENARIO
+    if not isinstance(scenario_id, str):
+        raise ApiError("invalid_parameter", "scenario_id 는 문자열이어야 합니다.")
+    baseline_data = data.get("baseline") or {}
+    if not isinstance(baseline_data, dict):
+        raise ApiError("invalid_parameter", "baseline 은 JSON 객체여야 합니다.")
+    limit = _setting(data, "limit", 100, cast=int, minimum=1, maximum=MAX_LIMIT)
+
+    current = _whatif_settings(data, detector)
+    baseline = _whatif_settings(baseline_data, detector)
+    panel, injections, decoys = _whatif_scenario(store, scenario_id)
+
+    now, now_cached = _whatif_run(
+        store, scenario_id, panel, injections, decoys, detector, current)
+    base, base_cached = _whatif_run(
+        store, scenario_id, panel, injections, decoys, detector, baseline)
+
+    def key_of(row):
+        return tuple(row.get(name) for name in DETECTION_KEYS)
+
+    now_keys = {key_of(row) for row in now["items"]}
+    base_keys = {key_of(row) for row in base["items"]}
+    added, removed = now_keys - base_keys, base_keys - now_keys
+    truth_keys = set()
+    if injections is not None and len(injections):
+        truth_keys = {key_of(row) for row in records(injections)}
+
+    changed = []
+    for source, keys, label in ((now["items"], added, "added"), (base["items"], removed, "removed")):
+        for row in source:
+            key = key_of(row)
+            if key in keys:
+                changed.append({**row, "change": label, "was_injected": key in truth_keys})
+    changed.sort(key=lambda row: (row["change"], -(row.get("score") or 0)))
+
+    delta = None
+    if now["metrics"] and base["metrics"]:
+        delta = {
+            name: None if value is None or base["metrics"].get(name) is None
+            else round(value - base["metrics"][name], 6)
+            for name, value in now["metrics"].items()
+        }
+
+    return envelope(
+        store,
+        scenario_id=scenario_id,
+        params={"detector": detector, **current},
+        baseline={"detector": detector, **baseline},
+        unchanged_settings=current == baseline,
+        metrics=now["metrics"], baseline_metrics=base["metrics"], delta=delta,
+        summary={"evaluated_rows": now["evaluated_rows"], "skipped": now["skipped"]},
+        counts={
+            "current": len(now["items"]), "baseline": len(base["items"]),
+            "added": len(added), "removed": len(removed),
+            "unchanged": len(now_keys & base_keys),
+        },
+        cached={"current": now_cached, "baseline": base_cached},
+        total=len(changed), count=min(len(changed), limit),
+        items=[{
+            **row,
+            "domestic_name": store.domestic_name(row.get("domestic_id")),
+            "foreign_name": store.foreign_name(row.get("foreign_id")),
+            "foreign_country": store.foreign_country(row.get("foreign_id")),
+        } for row in changed[:limit]],
+    )
+
