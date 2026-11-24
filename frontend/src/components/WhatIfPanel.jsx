@@ -23,10 +23,12 @@ const shown = ['tp', 'fp', 'fn', 'precision', 'recall', 'f1', 'decoy_fp']
 const number = (value, digits = 3) =>
   value == null ? '—' : Number.isInteger(value) ? value : value.toFixed(digits)
 const signed = (value, digits = 3) =>
-  value == null || value === 0 ? '0' : `${value > 0 ? '+' : ''}${number(value, digits)}`
+  value == null ? '—' : value === 0 ? '0' : `${value > 0 ? '+' : ''}${number(value, digits)}`
 
-export default function WhatIfPanel() {
-  const [settings, setSettings] = useState(defaultSettings())
+export default function WhatIfPanel({ version, onSelect }) {
+  const [settings, setSettings] = useState({
+    ...defaultSettings(), scenario_id: 'step_x3',
+  })
   const [scenarios, setScenarios] = useState(['original'])
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
@@ -37,14 +39,23 @@ export default function WhatIfPanel() {
     const controller = new AbortController()
     getData('/api/scenarios', controller.signal)
       .then((body) => {
+        if (controller.signal.aborted) return
+        if (version && body.data_version !== version)
+          throw new Error('데이터가 바뀌었습니다. 새로고침해 주세요.')
         const names = body.items.map((item) => item.scenario_id)
         setScenarios(names.length ? names : ['original'])
+        setSettings((previous) => names.includes(previous.scenario_id)
+          ? previous : { ...previous, scenario_id: 'original' })
       })
-      .catch(() => {
+      .catch((cause) => {
+        if (controller.signal.aborted) return
         // 시나리오 목록을 못 받아도 원본 재계산은 할 수 있다.
+        setScenarios(['original'])
+        setSettings((previous) => ({ ...previous, scenario_id: 'original' }))
+        setError(cause.message)
       })
     return () => controller.abort()
-  }, [])
+  }, [version])
 
   useEffect(() => () => pending.current?.abort(), [])
 
@@ -72,9 +83,11 @@ export default function WhatIfPanel() {
     setLoading(true)
     setError(null)
     try {
-      setResult(await postWhatIf(settings, controller.signal))
+      const answer = await postWhatIf(settings, controller.signal, version)
+      if (pending.current === controller && !controller.signal.aborted)
+        setResult(answer)
     } catch (cause) {
-      if (cause.name === 'AbortError') return
+      if (cause.name === 'AbortError' || pending.current !== controller) return
       setResult(null)
       setError(cause.message)
     } finally {
@@ -86,13 +99,14 @@ export default function WhatIfPanel() {
   const changed = result?.items ?? []
 
   return (
-    <section className="whatif" aria-label="What-if 재계산">
+    <section className="whatif" aria-label="What-if 분석">
       <div className="chart-heading">
         <div>
           <h2>What-if</h2>
           <p>
             설정을 바꿔 다시 계산합니다. 기준은 명세의 기본 설정
             (Z-score 2.5 · 증가율 1.0 · k 3 · 최소 건수 3 · 보정 없음) 입니다.
+            같은 시나리오의 전체 데이터 기준이며 위 기관·연도 필터와 별도입니다.
           </p>
         </div>
       </div>
@@ -109,7 +123,7 @@ export default function WhatIfPanel() {
         <label>
           임계값
           <input
-            type="number" name="threshold" step="0.1"
+            type="number" name="threshold" min="0" max="1000" step="0.1" required
             value={settings.threshold} onChange={change}
           />
         </label>
@@ -117,6 +131,7 @@ export default function WhatIfPanel() {
           기준 기간 k
           <input
             type="number" name="k" min="2" max="10" step="1"
+            disabled={settings.detector === 'growth'} required
             value={settings.k} onChange={change}
           />
         </label>
@@ -124,6 +139,7 @@ export default function WhatIfPanel() {
           최소 건수
           <input
             type="number" name="min_count" min="0" step="1"
+            disabled={settings.detector === 'zscore'} required
             value={settings.min_count} onChange={change}
           />
         </label>
@@ -152,6 +168,11 @@ export default function WhatIfPanel() {
 
       {result && !error && (
         <>
+          <p className="view-note">
+            적용한 설정 · {detectorLabels[result.params.detector]} · 임계값 {result.params.threshold}
+            {' · '}k {result.params.k} · 최소 {result.params.min_count}편 · {correctionLabels[result.params.correction_id]}.
+            아래는 마지막 계산 결과입니다.
+          </p>
           <p className="whatif-summary">
             탐지 <strong>{result.counts.baseline}건</strong> →{' '}
             <strong>{result.counts.current}건</strong>
@@ -161,31 +182,33 @@ export default function WhatIfPanel() {
           </p>
 
           {result.metrics ? (
-            <table className="whatif-metrics">
-              <caption>
-                기준 {detectorLabels[result.baseline.detector]} {result.baseline.threshold}
-                {' → '}
-                {detectorLabels[result.params.detector]} {result.params.threshold}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">지표</th>
-                  <th scope="col">기준</th>
-                  <th scope="col">바꾼 설정</th>
-                  <th scope="col">차이</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.map((name) => (
-                  <tr key={name}>
-                    <th scope="row">{metricLabels[name] ?? name}</th>
-                    <td>{number(result.baseline_metrics?.[name])}</td>
-                    <td>{number(result.metrics[name])}</td>
-                    <td>{signed(result.delta?.[name])}</td>
+            <div className="table-scroll">
+              <table className="whatif-metrics">
+                <caption>
+                  기준 {detectorLabels[result.baseline.detector]} {result.baseline.threshold}
+                  {' → '}
+                  {detectorLabels[result.params.detector]} {result.params.threshold}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">지표</th>
+                    <th scope="col">기준</th>
+                    <th scope="col">바꾼 설정</th>
+                    <th scope="col">차이</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {shown.map((name) => (
+                    <tr key={name}>
+                      <th scope="row">{metricLabels[name] ?? name}</th>
+                      <td>{number(result.baseline_metrics?.[name])}</td>
+                      <td>{number(result.metrics[name])}</td>
+                      <td>{signed(result.delta?.[name])}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <p className="detection-note">
               이 데이터에는 주입 정답이 없어 지표를 낼 수 없습니다. 탐지 증감만 보입니다.
@@ -198,37 +221,43 @@ export default function WhatIfPanel() {
           {changed.length === 0 ? (
             <p className="detection-note">설정을 바꿔도 탐지 결과가 같습니다.</p>
           ) : (
-            <table className="whatif-changes">
-              <thead>
-                <tr>
-                  <th scope="col">변화</th>
-                  <th scope="col">국내 기관</th>
-                  <th scope="col">해외 기관</th>
-                  <th scope="col">분야</th>
-                  <th scope="col">연도</th>
-                  <th scope="col">점수</th>
-                  <th scope="col">주입 정답</th>
-                </tr>
-              </thead>
-              <tbody>
-                {changed.map((row) => (
-                  <tr key={`${row.change}|${row.domestic_id}|${row.foreign_id}|${row.field}|${row.year}`}>
-                    <td className={row.change === 'added' ? 'change-added' : 'change-removed'}>
-                      {row.change === 'added' ? '새로 생김' : '사라짐'}
-                    </td>
-                    <td>{row.domestic_name}</td>
-                    <td>
-                      {row.foreign_name}
-                      {row.foreign_country && <span className="unit"> ({row.foreign_country})</span>}
-                    </td>
-                    <td>{row.field}</td>
-                    <td>{row.year}</td>
-                    <td>{number(row.score, 2)}</td>
-                    <td>{row.was_injected ? '예' : '아니오'}</td>
+            <div className="table-scroll">
+              <table className="whatif-changes">
+                <thead>
+                  <tr>
+                    <th scope="col">변화</th>
+                    <th scope="col">국내 기관</th>
+                    <th scope="col">해외 기관</th>
+                    <th scope="col">분야</th>
+                    <th scope="col">연도</th>
+                    <th scope="col">점수</th>
+                    <th scope="col">주입 정답</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {changed.map((row) => (
+                    <tr key={`${row.change}|${row.domestic_id}|${row.foreign_id}|${row.field}|${row.year}`}>
+                      <td className={row.change === 'added' ? 'change-added' : 'change-removed'}>
+                        {row.change === 'added' ? '새로 생김' : '사라짐'}
+                      </td>
+                      <td>
+                        <button className="pair-link" onClick={() => onSelect?.(row)}>
+                          {row.domestic_name}
+                        </button>
+                      </td>
+                      <td>
+                        {row.foreign_name}
+                        {row.foreign_country && <span className="unit"> ({row.foreign_country})</span>}
+                      </td>
+                      <td>{row.field}</td>
+                      <td>{row.year}</td>
+                      <td>{number(row.score, 2)}</td>
+                      <td>{row.was_injected ? '예' : '아니오'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {result.total > changed.length && (
             <p className="detection-note">

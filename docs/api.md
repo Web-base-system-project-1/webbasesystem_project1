@@ -117,9 +117,9 @@ GET /api/institutions?role=domestic&q=기관
 }
 ```
 
-해외 기관은 `type` 이 `null` 입니다.
+해외 기관은 `type`이 `null`입니다. `role=foreign&type=education`처럼 조회하면 해당 유형의 **국내 기관과 협력한** 해외 기관을 반환합니다.
 
-기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`를 지원합니다.
+기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`, `year`를 지원합니다.
 예: `/api/institutions?role=foreign&field=ai&domestic_id=...`는 해당 국내 기관과 AI 공동논문이 있는 해외 기관만 반환합니다.
 반대로 `role=domestic&field=ai&foreign_id=...`로 국내 협력 기관을 조회합니다.
 해당 범위에 공동논문이 1편 이상인 관계만 포함하고 0으로 채운 시계열만 있는 관계는 제외합니다.
@@ -410,6 +410,8 @@ GET /api/institutions?role=domestic&q=기관
 | `scenario_id` | — | 주입 시나리오 |
 | `detector` | — | `zscore`, `growth` |
 | `threshold` | — | 임계값 |
+| `k` | — | 기준 기간. 정수 2~10 |
+| `min_count` | — | 최소 건수. 정수 0 이상 |
 | `limit` | 100 | 최대 1000 |
 
 ```json
@@ -441,7 +443,7 @@ GET /api/institutions?role=domestic&q=기관
 `metrics.csv` 의 평가 열(`tp`, `fp`, `fn`, `precision`, `recall`, `f1`,
 `recall_effective`, `delay_mean`, `missed_pairs`, `decoy_fp`)이 모두 들어갑니다.
 
-`summary` 는 보정 하나의 전체 효과를 한 줄로 봅니다. **`fp_removed` 는 지운 오탐,
+`summary` 는 위 필터를 통과한 실행 전체의 보정 효과를 한 줄로 봅니다. `limit`은 상세 목록만 제한합니다. **`fp_removed` 는 지운 오탐,
 `tp_lost` 는 같이 지워진 정탐**입니다. 두 숫자를 함께 봐야 보정이 남는 장사인지 알 수 있습니다.
 
 `delta` 는 `after - before` 입니다. 보정은 탐지를 지우기만 하므로 `tp` 와 `fp` 의
@@ -461,6 +463,8 @@ GET /api/institutions?role=domestic&q=기관
 | `scenario_id` | ✅ | 주입 시나리오 |
 | `detector` | ✅ | `zscore`, `growth` |
 | `threshold` | ✅ | 임계값 |
+| `k` | | 기준 기간. 정수 2~10 |
+| `min_count` | | 최소 건수. 정수 0 이상 |
 | `change` | | 아래 네 값 중 하나로 거르기 |
 | `limit` | 100 | 최대 1000 |
 
@@ -494,6 +498,8 @@ GET /api/institutions?role=domestic&q=기관
 숫자로 보여줄 수 있습니다. 위 예시 행은 국제 공동논문 총수가 1 편인 쌍이라
 비중이 0%↔100% 로 튀어 z-score 가 21.94 까지 올라갔던 경우입니다.
 
+여러 실행이 일치하면 k와 min_count로 하나를 지정해야 하며, 그렇지 않으면 **400 `invalid_parameter`** 입니다.
+
 그 조건의 전후 실행이 저장돼 있지 않으면 **404 `comparison_unavailable`** 입니다.
 예를 들어 z-score 보정을 증가율 실행에 물어보면 짝이 없으므로 404 입니다.
 
@@ -505,15 +511,15 @@ GET /api/institutions?role=domestic&q=기관
 저장된 결과를 읽는 것이 아니라 2번 담당자의 탐지·보정·평가 함수를 그 자리에서
 호출합니다. 수식을 API 에서 다시 구현하지 않습니다.
 
-요청 본문은 JSON 객체입니다. 지정하지 않은 값은 명세의 기본값(z-score 2.5,
+요청 본문은 JSON 객체입니다. 빈 본문은 기본 설정을 사용하며 명시적인 null·배열·잘못된 JSON은 400입니다. 지정하지 않은 값은 명세의 기본값(z-score 2.5,
 증가율 1.0, k 3, 최소 건수 3, 보정 없음)을 씁니다.
 
 | 필드 | 기본값 | 설명 |
 |---|---|---|
 | `detector` | `zscore` | `zscore`, `growth` |
-| `threshold` | 탐지기 기본값 | 유한한 숫자 |
-| `k` | 3 | 2~10 |
-| `min_count` | 3 | 0 이상 |
+| `threshold` | 탐지기 기본값 | 유한한 숫자 0~1000 |
+| `k` | 3 | 정수 2~10. Z-score에 사용 |
+| `min_count` | 3 | 정수 0 이상. 증가율에 사용 |
 | `scenario_id` | `original` | 주입 시나리오 |
 | `correction_id` | `none` | 해당 탐지기의 보정 또는 `none` |
 | `baseline` | 기본 설정 | 견줄 설정. `threshold`·`k`·`min_count`·`correction_id` 만 바꿉니다 |
@@ -547,12 +553,14 @@ GET /api/institutions?role=domestic&q=기관
 
 `items` 의 `change` 는 기준 설정 대비 **`added`(새로 생긴 탐지)** 와
 **`removed`(사라진 탐지)** 입니다. `was_injected` 로 그것이 주입 정답이었는지
-구분합니다. 화면의 「새로 생긴/사라진 탐지 표시」가 이 목록입니다.
+구분합니다. 화면의 「새로 생긴/사라진 탐지 표시」가 이 목록입니다. 평가 범위는 같은 시나리오 전체이며 화면의 기관·분야·연도 필터와 별도입니다.
+
+분석 화면 호환용 `reference_params`·`reference_metrics`는 `baseline`·`baseline_metrics`의 별칭입니다. `added_total`·`removed_total`은 전체 증감 건수이고 `added`·`removed`는 각각 최대 200행입니다. 상세 목록 `items`는 `limit`을 따릅니다. 정답 없는 original의 Recall은 null이며, 실험의 FP는 실제 이상 여부를 확정하지 않습니다.
 
 **캐시**: 같은 설정으로 다시 물으면 계산하지 않고 보관한 결과를 돌려주고
-`cached` 가 `true` 가 됩니다. 캐시 키에 **데이터 버전·시나리오·탐지기·임계값·k·
+`cached.current` 또는 `cached.baseline` 이 `true` 가 됩니다. 캐시 키에 **데이터 버전·시나리오·탐지기·임계값·k·
 최소 건수·보정 버전**이 모두 들어가므로 오래된 결과가 섞이지 않습니다.
-보관하는 설정은 최근 8벌입니다.
+DataStore 인스턴스마다 최근 8벌을 보관하며, 잠금으로 동시 계산을 보호합니다. 데이터 재로드 시 캐시도 새로 만듭니다.
 
 `metrics` 는 주입 정답이 있는 데이터에서만 나옵니다. 실험 기록이 없는 폴더에서는
 `metrics` 와 `delta` 가 `null` 이고 탐지 목록과 증감만 제공합니다. 그런 폴더에
@@ -560,7 +568,7 @@ GET /api/institutions?role=domestic&q=기관
 `kr_totals.csv` 가 없으면 **409 `detection_unavailable`** 입니다.
 
 v2 데이터에서는 이 재계산 결과가 저장된 `metrics.csv` 의 `tp`·`fp`·`fn`·`decoy_fp`
-와 정확히 일치합니다(`tests/test_api.py` 에서 step_x5 의 12개 실행으로 확인).
+와 정확히 일치합니다(`tests/test_api.py`에서 7개 시나리오의 보정 전후 84개 실행으로 확인).
 
 ## 현재 한계
 
@@ -579,7 +587,7 @@ v2 데이터에서는 이 재계산 결과가 저장된 `metrics.csv` 의 `tp`·
 ## GET `/api/experiment-timeline` (프론트 통합 추가)
 
 필수 쿼리: domestic_id, foreign_id, field, scenario_id, detector, threshold.
-저장된 correction_id=none 실행 하나를 선택합니다. 응답은 data_version, seed, original(원본 시계열),
+correction_id는 기본 none이며 require_share_increase(증가율), min_international_total_3(Z-score)를 지원합니다. 저장 실행 하나를 선택합니다. 응답은 data_version, seed, original(원본 시계열),
 points(주입 시계열), detections(해당 run_id의 탐지 근거), injections(기관 쌍별 정답),
 metrics(전체 실행 지표), target(대표 주입 기관 쌍)입니다.
 
@@ -588,4 +596,10 @@ experiment_manifest의 데이터 버전·시드·주입/탐지/평가 파일 해
 불일치 시 503 data_unavailable, 존재하지 않는 실행이나 기관 쌍은 404 입니다.
 증가율의 k 열은 결측일 수 있으므로 탐지 근거는 metrics의 run_id로 대응합니다.
 기존 /api/timeline은 계속 원본 시계열을 반환하며, 주입 비교에는 이 전용 API를 사용해야 합니다.
-현재 v1 ZIP의 보정 전 42회 결과를 제공하며 보정 후 결과는 별도 통합 예정입니다.
+현재 v2 ZIP의 보정 전후 84회 결과를 제공합니다. `before_metrics`, `before_detections`는 같은 시나리오·탐지기·임계값의 보정 전 실행입니다. `metrics`, `detections`는 요청한 보정 실행이며, 기관 쌍별 시계열과 전체 평가를 구분합니다.
+
+## GET `/api/matrix`
+
+필수 `field`; 선택 `year`, `domestic_id`, `foreign_id`, `type`(국내 기관), `country`(해외 기관), `limit`(기본 15, 최대 30). 탐지는 기존 `source=live|file`, 탐지기·임계값 조회 규칙을 따릅니다. React는 source=live를 사용합니다.
+
+현재 조건에서 양수 공동논문 수를 합산하고 국내·해외 각각 합계 상위 limit곳의 교차 행렬을 반환합니다. `domestic`, `foreign`는 `{id,name}` 축 목록, `items`는 `{domestic_id,foreign_id,collab_count,detections}`입니다. `total_pairs`는 축 제한 전 양수 관계 수이며 `count`는 표시 관계 수입니다. 기관 쌍 건수 합은 고유 논문 수가 아닙니다.

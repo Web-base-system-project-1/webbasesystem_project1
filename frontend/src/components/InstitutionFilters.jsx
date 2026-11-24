@@ -11,6 +11,8 @@ export default function InstitutionFilters({
   selection,
   onChange,
   pair,
+  year,
+  type,
 }) {
   return (
     <section className="filters" aria-label="조회 조건">
@@ -18,6 +20,8 @@ export default function InstitutionFilters({
         <>
           <InstitutionSearch
             role="domestic"
+            year={year}
+            type={type}
             field={selection.field}
             relatedId={selection.foreign_id}
             label="국내 기관"
@@ -34,6 +38,8 @@ export default function InstitutionFilters({
           />
           <InstitutionSearch
             role="foreign"
+            year={year}
+            type={type}
             field={selection.field}
             relatedId={selection.domestic_id}
             label="해외 기관"

@@ -6,9 +6,18 @@ import TimelineSummary from './components/TimelineSummary'
 import YearlyTable from './components/YearlyTable'
 import DetectionList from './components/DetectionList'
 import ExperimentView from './components/ExperimentView'
+import OverviewHeatmap from './components/OverviewHeatmap'
+import CooperationMatrix from './components/CooperationMatrix'
+import ShareTimeline from './components/ShareTimeline'
+import CorrectionView from './components/CorrectionView'
+import WhatIfPanel from './components/WhatIfPanel'
 import './App.css'
 
 function App() {
+  const [view, setView] = useState('overview')
+  const [year, setYear] = useState('')
+  const [type, setType] = useState('')
+  const [country, setCountry] = useState('')
   const [catalogResult, setCatalogResult] = useState(null)
   const [selection, setSelection] = useState({
     domestic_id: '',
@@ -122,6 +131,9 @@ function App() {
     }))
   }
   const selectDetection = (row) => {
+    setView('timeline')
+    setYear(row.year == null ? '' : String(row.year))
+    setCountry('')
     setSelection({
       domestic_id: row.domestic_id,
       foreign_id: row.foreign_id,
@@ -149,14 +161,119 @@ function App() {
         )}
       </header>
 
+      <nav className="view-tabs" aria-label="분석 화면">
+        {[
+          ['overview', '국가 개요'],
+          ['matrix', '협력 관계'],
+          ['timeline', '기관 추이'],
+          ['detections', '탐지 결과'],
+          ['experiment', '주입 실험'],
+          ['corrections', '보정 비교'],
+          ['whatif', 'What-if'],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            aria-pressed={view === id}
+            onClick={() => setView(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+      <div className="scope-filters">
+        <label>
+          연도
+          <select
+            value={year}
+            onChange={(e) => {
+              setYear(e.target.value)
+              setSelectedYear(e.target.value ? Number(e.target.value) : null)
+            }}
+          >
+            <option value="">전체 기간</option>
+            {catalog?.meta.years.min != null &&
+              Array.from(
+                { length: catalog.meta.years.max - catalog.meta.years.min + 1 },
+                (_, i) => catalog.meta.years.min + i,
+              ).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          국내 기관 유형
+          <select
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value)
+              setSelection((p) => ({ ...p, domestic_id: '', foreign_id: '' }))
+              setSelectedYear(null)
+            }}
+          >
+            <option value="">전체 유형</option>
+            <option value="education">대학·교육기관</option>
+            <option value="facility">연구시설</option>
+            <option value="government">정부기관</option>
+          </select>
+        </label>
+        <button
+          className="plain-button"
+          onClick={() => {
+            setSelection((p) => ({ ...p, domestic_id: '', foreign_id: '' }))
+            setSelectedYear(null)
+          }}
+        >
+          기관 선택 해제
+        </button>
+        {country && (
+          <button className="plain-button" onClick={() => setCountry('')}>
+            국가 조건 해제 · {country}
+          </button>
+        )}
+      </div>
+      {!catalog && !catalogError && <p role="status">데이터를 불러오는 중입니다.</p>}
+      {catalogError && view !== 'timeline' && (
+        <p role="alert">
+          {catalogError}{' '}
+          <button onClick={() => setRetry((v) => v + 1)}>다시 불러오기</button>
+        </p>
+      )}
       <InstitutionFilters
         catalog={catalog}
         selection={selection}
         pair={timeline?.pair}
+        year={year}
+        type={type}
         onChange={change}
       />
 
+      {catalog && view === 'overview' && (
+        <OverviewHeatmap
+          field={selection.field}
+          year={year}
+          version={catalog.meta.data_version}
+          onCountry={(code, y) => {
+            setCountry(code || '')
+            setYear(String(y))
+            setSelection((p) => ({ ...p, domestic_id: '', foreign_id: '' }))
+            setView('matrix')
+          }}
+        />
+      )}
+      {catalog && view === 'matrix' && (
+        <CooperationMatrix
+          selection={selection}
+          year={year}
+          type={type}
+          country={country}
+          version={catalog.meta.data_version}
+          onSelect={selectDetection}
+        />
+      )}
       <section
+        hidden={view !== 'timeline'}
         id="timeline"
         className="results"
         aria-label="조회 결과"
@@ -197,6 +314,17 @@ function App() {
               <div className="chart-scroll">
                 <TimelineChart points={points} selectedYear={selectedYear} />
               </div>
+              <p className="view-note">
+                타임라인은 과거 기준을 확인할 수 있도록 전체 기간을 표시하며,
+                선택한 연도를 강조합니다.
+              </p>
+              <ShareTimeline
+                points={points}
+                baseline={timeline.baseline || []}
+                detections={timeline.detections || []}
+                injections={timeline.injections || []}
+                selectedYear={selectedYear}
+              />
               <YearlyTable points={points} />
               {selectedYear && (
                 <p role="status">선택한 탐지 연도: {selectedYear}년</p>
@@ -205,7 +333,7 @@ function App() {
           )
         )}
       </section>
-      {catalog && (
+      {catalog && view === 'detections' && (
         <>
           {catalog.meta.is_real_data && (
             <p className="detection-note">
@@ -214,7 +342,19 @@ function App() {
             </p>
           )}
           <DetectionList
-            detections={catalog.detections.items}
+            detections={catalog.detections.items.filter(
+              (d) =>
+                (!selection.field || d.field === selection.field) &&
+                (!selection.domestic_id ||
+                  d.domestic_id === selection.domestic_id) &&
+                (!selection.foreign_id ||
+                  d.foreign_id === selection.foreign_id) &&
+                (!year || d.year === Number(year)) &&
+                (!type ||
+                  catalog.domestic.some(
+                    (i) => i.id === d.domestic_id && i.type === type,
+                  )),
+            )}
             onSelect={selectDetection}
           />
           {catalog.detections.count < catalog.detections.total && (
@@ -225,9 +365,23 @@ function App() {
           )}
         </>
       )}
-      {catalog && (
+      {catalog && view === 'experiment' && (
         <ExperimentView
           selection={selection}
+          version={catalog.meta.data_version}
+          onSelect={selectDetection}
+        />
+      )}
+      {catalog && view === 'corrections' && (
+        <CorrectionView
+          selection={selection}
+          version={catalog.meta.data_version}
+          onSelect={selectDetection}
+        />
+      )}
+      {catalog && view === 'whatif' && (
+        <WhatIfPanel
+          key={catalog.meta.data_version}
           version={catalog.meta.data_version}
           onSelect={selectDetection}
         />
