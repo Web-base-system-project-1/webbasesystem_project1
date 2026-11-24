@@ -27,6 +27,8 @@ React는 상대 경로 `/api/...`를 사용합니다. 개발 중 Vite(5173)의 �
 | 400 | `invalid_parameter` | 숫자 자리에 글자, 허용하지 않는 값 |
 | 400 | `missing_parameter` | 필수 쿼리 누락 |
 | 404 | `pair_not_found` | 요청한 기관 쌍의 자료가 없음 |
+| 404 | `comparison_unavailable` | 그 조건의 보정 전후 실행이 저장돼 있지 않음 |
+| 409 | `comparison_unavailable` | 데이터에 보정을 적용한 실행이 하나도 없음 |
 | 503 | `data_unavailable` | 데이터 폴더·파일이 없거나 열이 모자람 |
 
 검색어 `q`는 정규식이 아닌 일반 문자열로 찾습니다. `threshold`는 유한한 숫자,
@@ -393,12 +395,116 @@ GET /api/institutions?role=domestic&q=기관
 
 ---
 
+## GET `/api/comparison`
+
+보정 전후를 **같은 실험 조건끼리 짝지어** 돌려줍니다. **보정 비교 뷰용.**
+
+숫자는 `experiments.evaluate` 가 만든 `metrics.csv` 를 그대로 씁니다. API 는 지표를
+다시 계산하지 않고 `correction_id=none` 행과 보정 행을 맞대기만 합니다. 짝은
+시나리오·탐지기·임계값·k·최소 건수가 모두 같을 때만 생기므로, z-score 보정과
+증가율 보정이 섞이지 않습니다.
+
+| 쿼리 | 기본값 | 설명 |
+|---|---|---|
+| `correction_id` | — | 보정 버전. 생략하면 전부 |
+| `scenario_id` | — | 주입 시나리오 |
+| `detector` | — | `zscore`, `growth` |
+| `threshold` | — | 임계값 |
+| `limit` | 100 | 최대 1000 |
+
+```json
+{
+  "data_version": "openalex-four-fields-2015-2025-1c38caf53194",
+  "corrections": ["min_international_total_3", "require_share_increase"],
+  "summary": [
+    { "correction_id": "min_international_total_3", "runs": 21,
+      "tp_before": 78, "tp_after": 78, "tp_lost": 0,
+      "fp_before": 10399, "fp_after": 9595, "fp_removed": 804,
+      "decoy_fp_before": 7, "decoy_fp_after": 7, "decoy_fp_removed": 0 }
+  ],
+  "total": 42, "count": 42,
+  "items": [
+    {
+      "scenario_id": "step_x5", "detector": "zscore", "threshold": 2.5,
+      "k": 3, "min_count": 3, "correction_id": "min_international_total_3",
+      "run_id": { "before": "zscore|th=2.5|k=3|min=3|corr=none",
+                  "after": "zscore|th=2.5|k=3|min=3|corr=min_international_total_3" },
+      "before": { "tp": 6, "fp": 462, "precision": 0.0128, "recall": 0.06, "decoy_fp": 0 },
+      "after":  { "tp": 6, "fp": 423, "precision": 0.0140, "recall": 0.06, "decoy_fp": 0 },
+      "delta":  { "tp": 0, "fp": -39, "precision": 0.0012, "recall": 0.0, "decoy_fp": 0 }
+    }
+  ]
+}
+```
+
+위 `before`·`after`·`delta` 는 지면상 열을 줄인 것이고, 실제 응답에는
+`metrics.csv` 의 평가 열(`tp`, `fp`, `fn`, `precision`, `recall`, `f1`,
+`recall_effective`, `delay_mean`, `missed_pairs`, `decoy_fp`)이 모두 들어갑니다.
+
+`summary` 는 보정 하나의 전체 효과를 한 줄로 봅니다. **`fp_removed` 는 지운 오탐,
+`tp_lost` 는 같이 지워진 정탐**입니다. 두 숫자를 함께 봐야 보정이 남는 장사인지 알 수 있습니다.
+
+`delta` 는 `after - before` 입니다. 보정은 탐지를 지우기만 하므로 `tp` 와 `fp` 의
+`delta` 는 0 이하입니다.
+
+저장된 보정 실행이 하나도 없으면 **409 `comparison_unavailable`**,
+`metrics.csv` 자체가 없으면 **409 `metrics_unavailable`** 입니다.
+
+## GET `/api/comparison/changes`
+
+실행 하나에서 **보정으로 판정이 바뀐 탐지 행**을 돌려줍니다. 「바로잡힌 오류와
+새로 생긴 오류, 판정 변화의 근거」에 해당합니다.
+
+| 쿼리 | 필수 | 설명 |
+|---|---|---|
+| `correction_id` | ✅ | 보정 버전 |
+| `scenario_id` | ✅ | 주입 시나리오 |
+| `detector` | ✅ | `zscore`, `growth` |
+| `threshold` | ✅ | 임계값 |
+| `change` | | 아래 네 값 중 하나로 거르기 |
+| `limit` | 100 | 최대 1000 |
+
+| `change` | 뜻 |
+|---|---|
+| `resolved_false_positive` | 보정이 지웠고 주입 정답이 아니었음 — **바로잡힌 오류** |
+| `lost_true_positive` | 보정이 지웠는데 주입 정답이었음 — **새로 생긴 오류** |
+| `introduced_false_positive` | 보정 뒤 새로 생긴 탐지, 정답 아님 |
+| `introduced_true_positive` | 보정 뒤 새로 생긴 탐지, 정답 |
+
+```json
+{
+  "run": { "scenario_id": "step_x5", "detector": "zscore", "threshold": 2.5,
+           "k": 3, "min_count": 3, "correction_id": "min_international_total_3" },
+  "before_detections": 468, "after_detections": 429, "unchanged": 429,
+  "counts": { "resolved_false_positive": 39, "lost_true_positive": 0,
+              "introduced_false_positive": 0, "introduced_true_positive": 0 },
+  "total": 39, "count": 39,
+  "items": [
+    { "domestic_id": "...", "domestic_name": "Jeonbuk National University",
+      "foreign_id": "...", "foreign_name": "Pennsylvania State University",
+      "foreign_country": "US", "field": "semiconductor", "year": 2019,
+      "collab_count": 1, "international_total": 1, "score": 21.94,
+      "change": "resolved_false_positive", "was_injected": false }
+  ]
+}
+```
+
+각 행에는 `/api/detections` 와 같은 근거 열(`score`, `baseline_value`,
+`international_total` 등)이 그대로 실려 있어, 화면에서 **왜 판정이 바뀌었는지**를
+숫자로 보여줄 수 있습니다. 위 예시 행은 국제 공동논문 총수가 1 편인 쌍이라
+비중이 0%↔100% 로 튀어 z-score 가 21.94 까지 올라갔던 경우입니다.
+
+그 조건의 전후 실행이 저장돼 있지 않으면 **404 `comparison_unavailable`** 입니다.
+예를 들어 z-score 보정을 증가율 실행에 물어보면 짝이 없으므로 404 입니다.
+
+---
+
 ## 아직 구현하지 않은 API
 
 | 메서드 | 경로 | 목적 | 예정 |
 |---|---|---|---|
 | POST | `/api/whatif` | 임계값·k·최소 건수 변경 시 재계산과 지표 | 11/19~11/25 |
-| GET | `/api/comparison` | 보정 전후 비교 | 11/19~11/25 |
+
 
 ## 현재 한계
 
