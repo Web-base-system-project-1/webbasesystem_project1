@@ -10,11 +10,21 @@ export default function InstitutionSearch({
   version,
   onChange,
   field,
+  year = '',
+  type = '',
   relatedId,
 }) {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState(null)
-  const key = JSON.stringify([role, query, version, field, relatedId])
+  const key = JSON.stringify([
+    role,
+    query,
+    version,
+    field,
+    relatedId,
+    year,
+    type,
+  ])
   const current = result?.key === key ? result : null
   useEffect(() => {
     const controller = new AbortController()
@@ -25,6 +35,8 @@ export default function InstitutionSearch({
           q: query,
           limit: '100',
           field,
+          year,
+          type,
           ...(relatedId
             ? { [role === 'foreign' ? 'domestic_id' : 'foreign_id']: relatedId }
             : {}),
@@ -45,7 +57,7 @@ export default function InstitutionSearch({
       clearTimeout(timer)
       controller.abort()
     }
-  }, [role, query, version, field, relatedId, key])
+  }, [role, query, version, field, relatedId, year, type, key])
   const items = current?.data?.items || []
   return (
     <div className="institution-search">

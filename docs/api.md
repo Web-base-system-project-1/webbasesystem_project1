@@ -117,9 +117,9 @@ GET /api/institutions?role=domestic&q=기관
 }
 ```
 
-해외 기관은 `type` 이 `null` 입니다.
+해외 기관은 `type`이 `null`입니다. `role=foreign&type=education`처럼 조회하면 해당 유형의 **국내 기관과 협력한** 해외 기관을 반환합니다.
 
-기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`를 지원합니다.
+기관 선택 연동용 쿼리: `field`, `domestic_id`, `foreign_id`, `year`를 지원합니다.
 예: `/api/institutions?role=foreign&field=ai&domestic_id=...`는 해당 국내 기관과 AI 공동논문이 있는 해외 기관만 반환합니다.
 반대로 `role=domestic&field=ai&foreign_id=...`로 국내 협력 기관을 조회합니다.
 해당 범위에 공동논문이 1편 이상인 관계만 포함하고 0으로 채운 시계열만 있는 관계는 제외합니다.
@@ -579,7 +579,7 @@ v2 데이터에서는 이 재계산 결과가 저장된 `metrics.csv` 의 `tp`·
 ## GET `/api/experiment-timeline` (프론트 통합 추가)
 
 필수 쿼리: domestic_id, foreign_id, field, scenario_id, detector, threshold.
-저장된 correction_id=none 실행 하나를 선택합니다. 응답은 data_version, seed, original(원본 시계열),
+correction_id는 기본 none이며 require_share_increase(증가율), min_international_total_3(Z-score)를 지원합니다. 저장 실행 하나를 선택합니다. 응답은 data_version, seed, original(원본 시계열),
 points(주입 시계열), detections(해당 run_id의 탐지 근거), injections(기관 쌍별 정답),
 metrics(전체 실행 지표), target(대표 주입 기관 쌍)입니다.
 
@@ -588,4 +588,28 @@ experiment_manifest의 데이터 버전·시드·주입/탐지/평가 파일 해
 불일치 시 503 data_unavailable, 존재하지 않는 실행이나 기관 쌍은 404 입니다.
 증가율의 k 열은 결측일 수 있으므로 탐지 근거는 metrics의 run_id로 대응합니다.
 기존 /api/timeline은 계속 원본 시계열을 반환하며, 주입 비교에는 이 전용 API를 사용해야 합니다.
-현재 v1 ZIP의 보정 전 42회 결과를 제공하며 보정 후 결과는 별도 통합 예정입니다.
+현재 v2 ZIP의 보정 전후 84회 결과를 제공합니다. `before_metrics`, `before_detections`는 같은 시나리오·탐지기·임계값의 보정 전 실행입니다. `metrics`, `detections`는 요청한 보정 실행이며, 기관 쌍별 시계열과 전체 평가를 구분합니다.
+
+## GET `/api/matrix`
+
+필수 `field`; 선택 `year`, `domestic_id`, `foreign_id`, `type`(국내 기관), `country`(해외 기관), `limit`(기본 15, 최대 30). 탐지는 기존 `source=live|file`, 탐지기·임계값 조회 규칙을 따릅니다. React는 source=live를 사용합니다.
+
+현재 조건에서 양수 공동논문 수를 합산하고 국내·해외 각각 합계 상위 limit곳의 교차 행렬을 반환합니다. `domestic`, `foreign`는 `{id,name}` 축 목록, `items`는 `{domestic_id,foreign_id,collab_count,detections}`입니다. `total_pairs`는 축 제한 전 양수 관계 수이며 `count`는 표시 관계 수입니다. 기관 쌍 건수 합은 고유 논문 수가 아닙니다.
+
+## POST `/api/whatif`
+
+Content-Type: application/json. 예:
+
+```json
+{"scenario_id":"step_x3","detector":"growth","threshold":1,"k":3,"min_count":3,"correction_id":"require_share_increase"}
+```
+
+- 시나리오: original, step_x2/x3/x5, gradual_x3, spike_x5, decoy_x3.
+- detector: zscore(기본) 또는 growth. threshold는 0~1000, 기본 2.5 또는 1(100%).
+- k: 정수 2~10, 기본 3. min_count: 정수 0~100000, 기본 3. k는 Z-score, min_count는 증가율에 사용됩니다.
+- correction_id: none(기본) 또는 탐지기에 맞는 위 보정 규칙. 잘못된 JSON·범위·조합은 400입니다.
+- 기존 `detectors`, `experiments.correct`, `experiments.evaluate`를 호출합니다. 전체 시나리오 기준이며 기관·분야·연도 부분 필터를 평가에 섞지 않습니다.
+- 같은 시나리오·탐지기의 기본 설정(k=3, min_count=3, threshold=2.5/1, 보정 없음)과 비교합니다.
+- 응답: data_version, scenario_id, cached, reference_params, params, reference_metrics, metrics, added_total, removed_total, added, removed. 탐지 차이는 국내·해외·분야·연도 키로 비교하며 각각 처음 200행과 이름을 제공합니다.
+- 데이터 버전·시나리오·탐지기·k·임계값·최소 건수·보정으로 구분하는 메모리 LRU 캐시(12개)를 사용합니다. 서버 재시작 시 비웁니다.
+- 주입 정답표에 없는 탐지를 실험상 FP로 세므로 실제 이상 여부와 다릅니다. 정답 없는 original의 Recall은 null입니다.

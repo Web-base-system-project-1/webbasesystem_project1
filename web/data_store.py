@@ -301,7 +301,7 @@ class DataStore:
 
     # ------------------------------------------------------------------ 조회
 
-    def institutions(self, role="domestic", query=None, type_=None, field=None, domestic_id=None, foreign_id=None):
+    def institutions(self, role="domestic", query=None, type_=None, field=None, domestic_id=None, foreign_id=None, year=None):
         if role == "domestic":
             frame = self.domestic.rename(columns={"domestic_id": "id"}).copy()
             frame["country_code"] = "KR"
@@ -312,19 +312,23 @@ class DataStore:
             else:
                 frame = self.foreign.rename(columns={"foreign_id": "id"}).copy()
             frame["type"] = None
-        if field or domestic_id or foreign_id:
+        if field or domestic_id or foreign_id or year is not None or (type_ and role == "foreign"):
             # 0으로 채운 행만 있는 관계는 협력 기관으로 표시하지 않습니다.
             related = self.shares[self.shares["collab_count"] > 0]
             for column, value in (("field", field), ("domestic_id", domestic_id), ("foreign_id", foreign_id)):
                 if value:
                     related = related[related[column] == value]
+            if year is not None:
+                related = related[related["year"] == year]
+            if type_:
+                related = related[related["domestic_id"].isin(self.domestic.loc[self.domestic["type"] == type_, "domestic_id"])]
             frame = frame[frame["id"].isin(related[f"{role}_id"].unique())]
         if query:
             lowered = query.lower()
             mask = frame["name"].astype(str).str.lower().str.contains(lowered, na=False, regex=False)
             mask |= frame["id"].astype(str).str.lower().str.contains(lowered, na=False, regex=False)
             frame = frame[mask]
-        if type_:
+        if type_ and role == "domestic":
             frame = frame[frame["type"] == type_]
         return frame
 

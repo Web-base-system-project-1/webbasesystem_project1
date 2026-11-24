@@ -130,7 +130,7 @@ def institutions():
     frame = store.institutions(
         role=role, query=request.args.get("q"), type_=request.args.get("type"),
         field=request.args.get("field"), domestic_id=request.args.get("domestic_id"),
-        foreign_id=request.args.get("foreign_id"),
+        foreign_id=request.args.get("foreign_id"), year=arg_int("year"),
     )
     total = len(frame)
     items = records(frame.iloc[offset:offset + limit])
@@ -443,7 +443,7 @@ def experiment_timeline():
     if threshold is None:
         raise ApiError("missing_parameter", "threshold가 필요합니다.")
     run = _filter_rows(store.metrics, scenario_id=scenario_id, detector=detector,
-                       threshold=threshold, correction_id="none")
+                       threshold=threshold, correction_id=request.args.get("correction_id", "none"))
     if len(run) != 1:
         raise ApiError("experiment_unavailable", "저장된 실험 설정이 없습니다.", 404)
     scenarios = experiment_scenarios(store)
@@ -457,13 +457,19 @@ def experiment_timeline():
         raise ApiError("pair_not_found", "해당 기관 쌍의 자료가 없습니다.", 404)
     cols = ["year", "collab_count", "international_total", "share"]
     hits = _filter_rows(store.detections, **pair, scenario_id=scenario_id,
-                        detector=detector, threshold=threshold, correction_id="none",
+                        detector=detector, threshold=threshold, correction_id=run.iloc[0]["correction_id"],
                         run_id=run.iloc[0]["run_id"])
+    before_run = _filter_rows(store.metrics, scenario_id=scenario_id, detector=detector,
+                               threshold=threshold, correction_id="none")
+    before_hits = _filter_rows(store.detections, **pair, scenario_id=scenario_id,
+                               run_id=before_run.iloc[0]["run_id"]) if len(before_run) == 1 else hits.iloc[:0]
     target = scenario.injections.iloc[0] if len(scenario.injections) else None
     return envelope(store, scenario_id=scenario_id, seed=store.experiment_manifest["seed"],
         original=records(original[cols]), points=records(changed[cols]),
         detections=records(hits), injections=records(_filter_rows(scenario.injections, **pair)),
         metrics=records(run)[0],
+        before_metrics=records(before_run)[0] if len(before_run) == 1 else None,
+        before_detections=records(before_hits), correction_id=run.iloc[0]["correction_id"],
         target={key: target[key] for key in pair} if target is not None else None)
 
 
@@ -935,4 +941,34 @@ def whatif():
             "foreign_country": store.foreign_country(row.get("foreign_id")),
         } for row in changed[:limit]],
     )
+
+
+@api_bp.get("/matrix")
+def cooperation_matrix():
+    store = get_store()
+    field = arg_required("field")
+    year = arg_int("year")
+    domestic_id = request.args.get("domestic_id") or None
+    foreign_id = request.args.get("foreign_id") or None
+    type_ = request.args.get("type") or None
+    limit = arg_int("limit", default=15, minimum=1, maximum=30)
+    frame = _filter_rows(store.shares, field=field, year=year,
+                         domestic_id=domestic_id, foreign_id=foreign_id)
+    if request.args.get("country"):
+        frame = frame[frame["foreign_id"].isin([i for i, code in store._foreign_country.items() if code == request.args["country"]])]
+    if type_:
+        frame = frame[frame["domestic_id"].isin(store.domestic.loc[store.domestic["type"] == type_, "domestic_id"])]
+    grouped = frame.groupby(["domestic_id", "foreign_id"], as_index=False)["collab_count"].sum()
+    grouped = grouped[grouped.collab_count > 0]
+    domestic = grouped.groupby("domestic_id").collab_count.sum().sort_values(ascending=False).head(limit).index.tolist()
+    foreign = grouped.groupby("foreign_id").collab_count.sum().sort_values(ascending=False).head(limit).index.tolist()
+    visible = grouped[grouped.domestic_id.isin(domestic) & grouped.foreign_id.isin(foreign)]
+    found, _, _, _ = resolve_detections(store, {"field": field, "year": year,
+                                               "domestic_id": domestic_id, "foreign_id": foreign_id})
+    hits = found.groupby(["domestic_id", "foreign_id"]).size().to_dict() if len(found) else {}
+    items = [{**row, "detections": hits.get((row["domestic_id"], row["foreign_id"]), 0)} for row in records(visible)]
+    return envelope(store, total_pairs=len(grouped), count=len(items),
+        domestic=[{"id": i, "name": store.domestic_name(i)} for i in domestic],
+        foreign=[{"id": i, "name": store.foreign_name(i)} for i in foreign], items=items)
+
 
